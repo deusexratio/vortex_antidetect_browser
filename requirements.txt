@@ -1,0 +1,6 @@
+SQLAlchemy~=2.0.37
+ openpyxl~=3.1.5
+loguru~=0.7.3
+fake-useragent~=2.0.3
+patchright~=1.49.1
+browserforge~=1.2.1
