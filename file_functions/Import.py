@@ -4,7 +4,7 @@ from openpyxl.reader.excel import load_workbook
 from better_proxy import Proxy
 from loguru import logger
 from fake_useragent import UserAgent
-from browserforge.fingerprints import FingerprintGenerator
+from browserforge.fingerprints import FingerprintGenerator, ScreenFingerprint, Screen
 from browserforge.headers import Browser
 from browserforge.injectors.utils import InjectFunction
 
@@ -40,6 +40,7 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
                     device='desktop',
                     locale=('en-US',),
                     http_version=2,
+                    screen=Screen(min_width=1000, min_height=600, max_width=1920, max_height=1080)
                 ).generate()
 
             user_data_dir = os.path.join(USER_DATA_DIR, name)

@@ -61,5 +61,13 @@ class Wallets(Base):
         return f'{self.id}: Name: {self.name}'
 
 
+class Extension(Base):
+    __tablename__ = 'extensions'
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(unique=True, index=True)
+    extension_id: Mapped[str]
+
+
 db = DB(f'sqlite:///{DB_DIR}', echo=False, pool_recycle=3600, connect_args={'check_same_thread': False})
 db.create_tables(Base)

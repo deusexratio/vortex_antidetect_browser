@@ -111,3 +111,32 @@ def update_dict(modifiable: dict, template: dict, rearrange: bool = True, remove
 
     return new_dict
 
+def get_file_names(directory_path, files: bool = True):
+    """
+    Получает список имен всех файлов в указанной папке.
+
+    :param files: Получать имена файлов если True, иначе получать имена папок
+    :param directory_path: Путь к папке.
+    :return: Список имен файлов.
+    """
+    try:
+        # Проверяем, существует ли папка
+        if not os.path.exists(directory_path):
+            raise FileNotFoundError(f"Папка '{directory_path}' не существует.")
+
+        if files:
+            # Получаем список файлов
+            file_names = [file for file in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, file))]
+            for file_name in file_names:
+                if file_name.startswith('.~'):
+                    file_names.remove(file_name)
+        else:
+            file_names = [join_path([directory_path, file])  for file in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, file))]
+            # for file_name in file_names:
+            #     if file_name.startswith('.~'):
+            #         file_names.remove(file_name)
+
+        return file_names
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        return []

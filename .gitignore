@@ -6,6 +6,9 @@ main_2.py
 user_files/
 db/user_data
 db/profiles.db
+file_functions/extensions.py
+file_functions/install_extensions.py
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
