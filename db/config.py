@@ -9,7 +9,10 @@ else:
 
 DB_FOLDER_DIR = os.path.join(ROOT_DIR, 'db')
 DB_DIR = os.path.join(DB_FOLDER_DIR, 'profiles.db')
-USER_DATA_DIR = os.path.join(DB_FOLDER_DIR, 'user_data')
+USER_DATA_DIR = os.path.join(DB_FOLDER_DIR, 'browser_data')
+ASSETS_DIR = os.path.join(DB_FOLDER_DIR, 'assets')
 USER_FILES_DIR = os.path.join(ROOT_DIR, 'user_files')
 IMPORT_TABLE = os.path.join(USER_FILES_DIR, 'profiles.xlsx')
 EXTENSIONS_DIR = os.path.join(USER_FILES_DIR, 'extensions')
+ADS_PROFILES_TABLE = os.path.join(USER_FILES_DIR, 'profiles_ads.xlsx')
+COOKIES_DIR = os.path.join(USER_FILES_DIR, 'cookies')

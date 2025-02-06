@@ -15,7 +15,11 @@ from file_functions.utils import touch, write_json, read_json, update_dict
 class ProfileXLSX:
     header = ['Name', 'Proxy', 'Fingerprint (autogenerates)', 'Profile Directory (autogenerates)']
 
-    def __init__(self, name: str, user_data_dir: str, proxy: str | Proxy = '', fingerprint: str | Fingerprint = ''):
+    def __init__(self, name: str,
+                 user_data_dir: str,
+                 proxy: str | Proxy = '',
+                 fingerprint: str | Fingerprint = '',
+                 ):
         self.name = name
         self.proxy = proxy
         self.fingerprint = fingerprint
@@ -49,6 +53,8 @@ def create_files():
     touch(path=config.USER_FILES_DIR)
     touch(path=config.USER_DATA_DIR)
     touch(path=config.EXTENSIONS_DIR)
+    touch(path=config.COOKIES_DIR)
+    # touch(path=config.ADS_PROFILES_TABLE, file=True)
     # touch(path=config.IMPORT_TABLE, file=True)
 
     # touch(path='.env', file=True)
@@ -91,32 +97,8 @@ def create_files():
 
         workbook.save(config.IMPORT_TABLE)
 
-    # try:
-    #     current_settings: dict | None = read_json(path=config.SETTINGS_FILE)
-    # except Exception:
-    #     current_settings = {}
-    #
-    # settings = {
-    #     # 'debug_logging': False,
-    #     'maximum_gas_price_sepolia': 50,
-    #     'maximum_gas_price_hemi': 10,
-    #     'etherscan_api_key': '',
-    #     'telegram': {
-    #         'send_notifications': False,
-    #         'bot_key': "",
-    #         'chat_id': [],
-    #         'admin_ids': []
-    #     },
-    #     'minimal_balance_sepolia': 0.5,
-    #     'minimal_balance_hemi': 0.1,
-    #     'use_autorefill': True,
-    #     'autorefill_amount': {'from': 0.0001, 'to': 0.0002},
-    #     'eth_amount_for_bridge': {'from': 0.1, 'to': 0.5},
-    #     'eth_amount_for_swap': {'from': 0.0001, 'to': 0.0005},
-    #     'token_amount_for_swap': {'from': 10, 'to': 1000},
-    #     # 'stable_faucet_amount': {'from': 9000, 'to': 10000},
-    #     'erc20_amount_to_bridge': {'from': 4000, 'to': 4200},
-    #     'activity_actions_delay': {'from': 100, 'to': 200},
-    #     'token_amount_for_capsule': {'from': 0, 'to': 50},
-    # }
-    # write_json(path=config.SETTINGS_FILE, obj=update_dict(modifiable=current_settings, template=settings), indent=2)
+    if not os.path.exists(config.ADS_PROFILES_TABLE):
+        workbook = Workbook()
+        sheet = workbook.active
+        write_headers(sheet, ['name', 'ads id', 'cookie'])
+        workbook.save(config.ADS_PROFILES_TABLE)

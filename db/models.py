@@ -36,6 +36,7 @@ class Profile(Base):
     fingerprint: Mapped[str | None]
     user_data_dir: Mapped[str] = mapped_column(unique=True) # default=os.path.join(USER_DATA_DIR, str(name))
     creation_date: Mapped[datetime] = mapped_column(default=datetime.now())
+    note: Mapped[str | None]
 
     def __repr__(self):
         return f'{self.id}: Name: {self.name}, Proxy: {self.proxy}, Fingerprint: {self.fingerprint}'

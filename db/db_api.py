@@ -22,3 +22,13 @@ def get_wallets_by_name(name: str, sqlite_query: bool = False) -> Wallets | None
     if sqlite_query:
         return db.execute('SELECT * FROM wallets WHERE name = ?', (name,), True)
     return db.one(Wallets, Wallets.name == name)
+
+def load_wallets(sqlite_query: bool = False) -> list[Wallets]:
+    if sqlite_query:
+        return db.execute('SELECT * FROM wallets')
+    return db.all(entities=Wallets)
+
+def flush_wallets():
+    all_wallets = load_wallets()
+    for wallets in all_wallets:
+        db.delete(wallets)

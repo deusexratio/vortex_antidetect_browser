@@ -39,7 +39,7 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
                     os=('windows', 'macos'),
                     device='desktop',
                     locale=('en-US',),
-                    http_version=2,
+                    http_version=3,
                     screen=Screen(min_width=1000, min_height=600, max_width=1920, max_height=1080)
                 ).generate()
 

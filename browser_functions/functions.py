@@ -12,6 +12,7 @@ from loguru import logger
 
 from db.models import Profile, db
 from db.db_api import load_profiles
+from browser_functions.cookie_utils import sanitize_cookie_value, convert_cookies_to_playwright_format
 
 
 async def close_page_with_delay(page: Page, delay: float) -> None:
@@ -26,35 +27,75 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
     try:
         async with async_playwright() as p:
             fingerprint = json.loads(profile.fingerprint)
+            args = [
+                # '--disable-blink-features=AutomationControlled',
+                # '--start-maximized',
+                # '--no-sandbox',
+                # '--disable-setuid-sandbox',
+                # '--disable-infobars',
+                # '--disable-dev-shm-usage',
+                # '--disable-blink-features',
+                # '--disable-blink-features=AutomationControlled',
+                # '--disable-features=IsolateOrigins,site-per-process',
+                # '--ignore-certificate-errors',
+                # '--enable-features=NetworkService,NetworkServiceInProcess',
+                # '--force-color-profile=srgb',
+                # '--disable-web-security',
+                # '--allow-running-insecure-content',
+                # '--disable-site-isolation-trials',
+                # f'--window-size={fingerprint["screen"]["width"]},{fingerprint["screen"]["height"]}',
+                '--app-name="Vortex Browser"',
+                f'--window-name={profile.name}',
+            ]
+
+            if extensions:
+                extension_paths = ",".join(extensions)  # Объединяем все пути через запятую
+                extension_arg = f"--load-extension={extension_paths}"
+                args.append(extension_arg)
+                logger.debug(f"Loading extensions: {extension_arg}")
+
+            if profile.proxy:
+                proxy = Proxy.from_str(profile.proxy).as_playwright_proxy
+            else:
+                proxy = None
 
             context = await p.chromium.launch_persistent_context(
                 user_data_dir=profile.user_data_dir,
                 headless=False,
-                args=[f"--load-extension={extension_path}" for extension_path in extensions],
+                args=args,
                 channel='chrome',
                 user_agent=fingerprint["navigator"]["userAgent"],
-                proxy=Proxy.from_str(profile.proxy).as_playwright_proxy,
+                proxy=proxy,
                 color_scheme='dark',
                 no_viewport=True,
-                # viewport={
-                #     'width': fingerprint["screen"]["width"],
-                #     'height': fingerprint["screen"]["height"]
-                # },
                 extra_http_headers={
-                    'Accept-Language': fingerprint['headers'].get(
-                        'Accept-Language',
-                        'en-US,en;q=0.9'
-                    ),
+                    'Accept-Language': fingerprint['headers'].get('Accept-Language', 'en-US,en;q=0.9'),
+                    'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
                     **fingerprint['headers']
                 },
                 ignore_default_args=[
+                    '--disable-component-extensions-with-background-pages',
                     '--enable-automation',
-                    '--no-sandbox',
-                    '--disable-blink-features=AutomationControlled',
                 ],
+                bypass_csp=True,
+                ignore_https_errors=True,
+                permissions=['geolocation', 'notifications', 'camera', 'microphone'],
             )
 
             try:
+                await context.add_init_script("""
+                                                Object.defineProperty(navigator, 'webdriver', {
+                                                    get: () => undefined
+                                                });
+                                                Object.defineProperty(navigator, 'automationControlled', {
+                                                    get: () => false
+                                                });
+                                                window.chrome = {
+                                                    runtime: {}
+                                                };
+                                            """)
                 await context.add_init_script(InjectFunction(fingerprint))
 
                 if keep_open:
@@ -62,7 +103,10 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                     # Открываем страницы и держим браузер открытым
                     for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
                         page = await context.new_page()
-                        await page.goto(page_url)
+                        try:
+                            await page.goto(page_url)
+                        except:
+                            pass
 
                     # Закрываем стартовую about:blank
                     for page in context.pages:
@@ -277,10 +321,10 @@ async def install_extension(context, extension_url: str):
     except Exception as e:
         logger.error(f"Failed to install extension {extension_url}: {e}")
         # Делаем скриншот для отладки
-        try:
-            await page.screenshot(path=f"error_screenshot_{profile.name}.png")
-        except:
-            pass
+        # try:
+        #     await page.screenshot(path=f"error_screenshot_{profile.name}.png")
+        # except:
+        #     pass
     finally:
         try:
             if page:
@@ -375,4 +419,111 @@ def install_extension_sync(context, extension_url: str):
                 page.close()
         except:
             pass
+
+###  OLD
+async def launch_profile_async_old(profile: Profile, extensions: list[str], keep_open: bool = True):
+    logger.debug(f"Starting profile {profile.name}...")
+    try:
+        async with async_playwright() as p:
+            fingerprint = json.loads(profile.fingerprint)
+            args = ['--disable-blink-features=AutomationControlled', '--start-maximized', '--no-sandbox',
+                    '--disable-setuid-sandbox', '--disable-infobars', '--disable-dev-shm-usage',
+                    ] # f"--disable-extensions-except={extensions}"
+
+            if extensions:
+                extension_paths = ",".join(extensions)  # Объединяем все пути через запятую
+                extension_arg = f"--load-extension={extension_paths}"
+                args.append(extension_arg)
+                logger.debug(f"Loading extensions: {extension_arg}")
+
+            if profile.proxy:
+                proxy = Proxy.from_str(profile.proxy).as_playwright_proxy
+            else:
+                proxy = None
+
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir=profile.user_data_dir,
+                headless=False,
+                args=args,
+                channel='chrome',
+                user_agent=fingerprint["navigator"]["userAgent"],
+                proxy=proxy,
+                color_scheme='dark', # light, null (system default)
+                no_viewport=True,
+                # viewport={
+                #     'width': fingerprint["screen"]["width"],
+                #     'height': fingerprint["screen"]["height"]
+                # },
+                extra_http_headers={
+                    'Accept-Language': fingerprint['headers'].get(
+                        'Accept-Language',
+                        'en-US,en;q=0.9'
+                    ),
+                    **fingerprint['headers']
+                },
+                ignore_default_args=[
+                    # '--enable-automation',
+                    # '--no-sandbox',
+                    # '--disable-blink-features=AutomationControlled',
+                    '--disable-component-extensions-with-background-pages'
+                ],
+            )
+
+            try:
+                await context.add_init_script(InjectFunction(fingerprint))
+
+                if keep_open:
+                    logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
+                    # Открываем страницы и держим браузер открытым
+                    for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
+                        page = await context.new_page()
+                        await page.goto(page_url)
+
+                    # Закрываем стартовую about:blank
+                    for page in context.pages:
+                        if page.url == 'about:blank':
+                            await page.close()
+
+
+                    while True:
+                        await asyncio.sleep(0.25)
+                        pages = context.pages
+                        if not pages:
+                            db.commit()
+                            break
+                        profile.page_urls = [
+                            page.url
+                            for page in pages
+                            if page.url != 'about:blank'
+                        ]
+                else:
+                    return context
+
+            except Exception as e:
+                logger.error(f"Error in profile {profile.name}: {e}")
+                if context:
+                    await context.close()
+                raise
+
+    except Exception as e:
+        logger.exception(f'Profile {profile.name} error: {e}')
+        return None
+
+
+async def import_cookies(context, cookies_data):
+    """Импортирует cookies в контекст браузера"""
+    try:
+        # Очищаем и конвертируем cookies
+        cookies = sanitize_cookie_value(cookies_data)
+        playwright_cookies = convert_cookies_to_playwright_format(cookies)
+        
+        if playwright_cookies:
+            # Добавляем cookies в контекст
+            await context.add_cookies(playwright_cookies)
+            logger.success(f"Successfully imported {len(playwright_cookies)} cookies")
+        else:
+            logger.warning("No valid cookies to import")
+            
+    except Exception as e:
+        logger.error(f"Error importing cookies: {e}")
 
