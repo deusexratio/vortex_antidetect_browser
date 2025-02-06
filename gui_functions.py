@@ -38,9 +38,9 @@ class SubMenu1(tk.Toplevel):
 
         # Добавляем кнопки
         buttons = [
-            ("Export selected cookies from AdsBrowser profiles", self.on_export_cookies),
             ("Import profiles to database from profiles.xlsx", import_profiles),
-            ("Import cookies from profiles_ads.xlsx", self.on_import_cookies),
+            ("Export selected cookies from AdsBrowser profiles", self.on_export_cookies),
+            ("Import cookies from JSONs in user_files/cookies", self.on_import_cookies),
             ("Import wallets to database for profiles from profiles.xlsx", import_wallets),
             ("Flush all seed phrases and private keys from database", self.on_flush_wallets),
             ("Fetch all extension ids to database", self.on_fetch_extension_ids),

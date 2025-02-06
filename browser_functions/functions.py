@@ -5,13 +5,10 @@ from random import randrange
 
 from better_proxy import Proxy
 from browserforge.injectors.utils import utils_js
-# from playwright.sync_api import sync_playwright
 from patchright.async_api import async_playwright, Page
 from loguru import logger
 
-
 from db.models import Profile, db
-from db.db_api import load_profiles
 from browser_functions.cookie_utils import sanitize_cookie_value, convert_cookies_to_playwright_format
 
 
@@ -27,6 +24,7 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
     try:
         async with async_playwright() as p:
             fingerprint = json.loads(profile.fingerprint)
+            print(fingerprint)
             args = [
                 # '--disable-blink-features=AutomationControlled',
                 # '--start-maximized',
@@ -65,26 +63,26 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                 headless=False,
                 args=args,
                 channel='chrome',
-                user_agent=fingerprint["navigator"]["userAgent"],
+                # user_agent=fingerprint["navigator"]["userAgent"],
                 proxy=proxy,
                 color_scheme='dark',
                 no_viewport=True,
-                extra_http_headers={
-                    'Accept-Language': fingerprint['headers'].get('Accept-Language', 'en-US,en;q=0.9'),
-                    'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                    **fingerprint['headers']
-                },
-                ignore_default_args=[
-                    '--disable-component-extensions-with-background-pages',
-                    '--enable-automation',
-                ],
-                bypass_csp=True,
-                ignore_https_errors=True,
-                permissions=['geolocation', 'notifications', 'camera', 'microphone'],
-                timezone_id=None, # todo: add timezone to settings
-                locale='en-US', # todo: add to settings
+                # extra_http_headers={
+                #     'Accept-Language': fingerprint['headers'].get('Accept-Language', 'en-US,en;q=0.9'),
+                #     'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
+                #     'sec-ch-ua-mobile': '?0',
+                #     'sec-ch-ua-platform': '"Windows"',
+                #     **fingerprint['headers']
+                # },
+                # ignore_default_args=[
+                #     '--disable-component-extensions-with-background-pages',
+                #     '--enable-automation',
+                # ],
+                # # bypass_csp=True,
+                # # ignore_https_errors=True,
+                # permissions=['geolocation', 'notifications', 'camera', 'microphone'],
+                # timezone_id=None, # todo: add timezone to settings
+                # locale='en-US', # todo: add to settings
             )
 
             try:
@@ -99,7 +97,7 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                                                     runtime: {}
                                                 };
                                             """)
-                await context.add_init_script(InjectFunction(fingerprint))
+                # await context.add_init_script(InjectFunction(fingerprint))
 
                 if keep_open:
                     logger.debug(f"Restoring previously opened tabs {profile.page_urls}")

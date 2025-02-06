@@ -27,53 +27,148 @@ def is_admin():
 def create_shortcut(python_path, script_path):
     """Создает ярлык/desktop entry в зависимости от ОС"""
     if is_windows():
-        import winshell
+        # Импортируем Windows-зависимости только когда они нужны
+        try:
+            import winshell
+            # import win32com.client
+        except ImportError as e:
+            print(f"Error importing Windows modules: {e}")
+            print("Attempting to fix by reinstalling dependencies...")
+            # Пробуем переустановить необходимые пакеты
+            subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pywin32>=223"], check=True)
+            subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "winshell"], check=True)
+            import winshell
+            # import win32com.client
+            
         desktop = Path(winshell.desktop())
         path = os.path.join(desktop, "Vortex Antidetect Browser.lnk")
-
-        with winshell.shortcut(path) as shortcut:
-            shortcut.path = python_path
-            shortcut.arguments = script_path
-            shortcut.working_directory = os.path.dirname(script_path)
-            shortcut.icon_location = (os.path.join(config.ROOT_DIR, "db", "assets", "logo.ico"), 0)
-            shortcut.description = "Vortex Antidetect Browser"
+        
+        # Создаем bat-файл для запуска
+        run_script = os.path.join(os.path.dirname(script_path), "run.bat")
+        with open(run_script, "w", encoding='utf-8') as f:
+            f.write(f"""@echo off
+call "{os.path.dirname(python_path)}\\activate.bat"
+start "" "{python_path}" "{script_path}"
+""")
+        
+        try:
+            # Создаем ярлык через winshell
+            with winshell.shortcut(path) as shortcut:
+                shortcut.path = run_script
+                shortcut.working_directory = os.path.dirname(script_path)
+                shortcut.icon_location = (os.path.join(config.ROOT_DIR, "db", "assets", "logo.ico"), 0)
+                shortcut.description = "Vortex Antidetect Browser"
+        except Exception as e:
+            print(f"Error creating shortcut with winshell: {e}")
+            print("Trying alternative method with win32com...")
+            # Альтернативный метод создания ярлыка
+            # shell = win32com.client.Dispatch("WScript.Shell")
+            # shortcut = shell.CreateShortCut(path)
+            # shortcut.TargetPath = run_script
+            # shortcut.WorkingDirectory = os.path.dirname(script_path)
+            # shortcut.IconLocation = os.path.join(config.ROOT_DIR, "db", "assets", "logo.ico")
+            # shortcut.Description = "Vortex Antidetect Browser"
+            # shortcut.Save()
     else:
         # Создаем .desktop файл для Linux/MacOS
+        run_script = create_run_script(python_path, script_path)
+        
         desktop_entry = f"""[Desktop Entry]
-Name=Profile Manager
-Exec={python_path} {script_path}
-Icon={os.path.join(config.ROOT_DIR, "db", "assets", "logo.ico")}
+Name=Vortex Antidetect Browser
+Exec="{run_script}"
+Icon={os.path.join(config.ROOT_DIR, "db", "assets", "logo.png")}
 Type=Application
 Terminal=false
 Categories=Utility;
+StartupWMClass=vortex-browser
 """
         if platform.system() == "Linux":
-            desktop_path = os.path.expanduser("~/.local/share/applications/profile-manager.desktop")
+            # Создаем ярлык в меню приложений
+            desktop_path = os.path.expanduser("~/.local/share/applications/vortex-browser.desktop")
+            # И на рабочем столе
+            desktop_shortcut = os.path.expanduser("~/Desktop/vortex-browser.desktop")
         else:  # MacOS
-            desktop_path = os.path.expanduser("~/Applications/Profile Manager.app")
+            desktop_path = os.path.expanduser("~/Applications/Vortex Browser.app/Contents/MacOS/vortex-browser")
+            desktop_shortcut = os.path.expanduser("~/Desktop/Vortex Browser.command")
             
+        # Создаем ярлык в меню приложений
         os.makedirs(os.path.dirname(desktop_path), exist_ok=True)
-        with open(desktop_path, "w") as f:
+        with open(desktop_path, "w", encoding='utf-8') as f:
             f.write(desktop_entry)
         
-        if platform.system() == "Linux":
-            # Делаем файл исполняемым
-            os.chmod(desktop_path, 0o755)
+        # Создаем ярлык на рабочем столе
+        with open(desktop_shortcut, "w", encoding='utf-8') as f:
+            if platform.system() == "Linux":
+                f.write(desktop_entry)
+            else:  # MacOS
+                f.write(f"""#!/bin/bash
+"{run_script}"
+""")
+        
+        # Делаем файлы исполняемыми
+        os.chmod(desktop_path, 0o755)
+        os.chmod(desktop_shortcut, 0o755)
+
+def create_run_script(python_path, script_path):
+    """Создает скрипт запуска в зависимости от ОС"""
+    if is_windows():
+        run_script = os.path.join(os.path.dirname(script_path), "run.bat")
+        with open(run_script, "w", encoding='utf-8') as f:
+            f.write(f"""@echo off
+call "{os.path.dirname(python_path)}\\activate.bat"
+start "" "{python_path}" "{script_path}"
+""")
+    else:
+        run_script = os.path.join(os.path.dirname(script_path), "run.sh")
+        with open(run_script, "w", encoding='utf-8') as f:
+            f.write(f"""#!/bin/bash
+source "{os.path.dirname(python_path)}/activate"
+cd "{os.path.dirname(script_path)}"  # Переходим в директорию скрипта
+exec "{python_path}" "{script_path}"
+""")
+        os.chmod(run_script, 0o755)
+    
+    return run_script
 
 def install_dependencies(pip_path):
     """Устанавливает зависимости с учетом ОС"""
     try:
         if is_windows():
             # Windows-специфичная установка
-            subprocess.run([pip_path, "install", "pywin32>=223"], check=True)
-            subprocess.run([pip_path, "install", "winshell"], check=True)
+            print("Installing pywin32...")
+            subprocess.run([pip_path, "install", "--upgrade", "pywin32>=223"], check=True)
             
             # Запускаем post-install скрипт pywin32
-            python_path = os.path.dirname(pip_path)
-            post_install = os.path.join(python_path, "Scripts", "pywin32_postinstall.py")
-            subprocess.run([os.path.join(python_path, "python.exe"), post_install, "-install"], check=True)
+            python_path = os.path.dirname(pip_path)  # путь к папке Scripts
+            python_exe = os.path.join(python_path, "python.exe")
+            
+            # Проверяем разные возможные пути к post-install скрипту
+            possible_paths = [
+                os.path.join(python_path, "pywin32_postinstall.py"),
+                os.path.join(python_path, "Scripts", "pywin32_postinstall.py"),
+                os.path.join(os.path.dirname(python_path), "Scripts", "pywin32_postinstall.py")
+            ]
+            
+            post_install = None
+            for path in possible_paths:
+                if os.path.exists(path):
+                    post_install = path
+                    break
+            
+            if post_install:
+                print(f"Running pywin32 post-install script: {post_install}")
+                subprocess.run([python_exe, post_install, "-install"], check=True)
+            else:
+                print("pywin32_postinstall.py not found, trying alternative installation...")
+                # Пробуем переустановить pywin32
+                subprocess.run([pip_path, "uninstall", "pywin32", "-y"], check=True)
+                subprocess.run([pip_path, "install", "--no-cache-dir", "pywin32>=223"], check=True)
+            
+            print("Installing winshell...")
+            subprocess.run([pip_path, "install", "winshell"], check=True)
         
-        # Общие зависимости для всех ОС
+        # Устанавливаем общие зависимости
+        print("Installing common dependencies...")
         subprocess.run([pip_path, "install", "-r", "requirements.txt"], check=True)
         
     except subprocess.CalledProcessError as e:
@@ -111,11 +206,7 @@ def main():
         if is_windows():
             python_path += ".exe"
             pip_path += ".exe"
-        
-        # Обновляем pip
-        messagebox.showinfo("Installation", "Updating pip...")
-        subprocess.run([pip_path, "install", "--upgrade", "pip"], check=True)
-        
+
         # Устанавливаем зависимости
         messagebox.showinfo("Installation", "Installing dependencies...")
         install_dependencies(pip_path)
@@ -124,16 +215,11 @@ def main():
         messagebox.showinfo("Installation", "Installing Patchright...")
         subprocess.run([pip_path, "install", "patchright"], check=True)
         subprocess.run([python_path, "-m", "patchright", "install"], check=True)
-        
-        # Создаем необходимые директории
-        os.makedirs(os.path.join(current_dir, "user_files", "extensions"), exist_ok=True)
-        os.makedirs(os.path.join(current_dir, "user_files", "cookies"), exist_ok=True)
-        os.makedirs(os.path.join(current_dir, "db", "browser_data"), exist_ok=True)
-        os.makedirs(os.path.join(current_dir, "assets"), exist_ok=True)
-        
-        # Создаем ярлык/desktop entry
+
+        # Создаем ярлык/desktop entry и скрипт запуска
         main_script = os.path.join(current_dir, "main.py")
         create_shortcut(python_path, main_script)
+        create_run_script(python_path, main_script)
         
         messagebox.showinfo("Installation", "Installation completed successfully!")
         

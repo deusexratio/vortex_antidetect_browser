@@ -8,6 +8,8 @@ db/user_data
 db/profiles.db
 file_functions/extensions.py
 file_functions/install_extensions.py
+run.bat
+run.sh
 
 
 # Byte-compiled / optimized / DLL files
