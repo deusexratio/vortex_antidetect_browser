@@ -1,5 +1,6 @@
 import asyncio
 import threading
+from loguru import logger
 
 from file_functions.create_files import create_files
 from gui_functions import ProfileManager
@@ -9,7 +10,7 @@ def main():
     # Создаем и настраиваем event loop
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     create_files()
     
     # Создаем и запускаем приложение

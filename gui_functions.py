@@ -6,12 +6,14 @@ import traceback
 from tkinter import messagebox, simpledialog
 from loguru import logger
 from typing import Dict, Any
+import subprocess
 
 from browser_functions.functions import close_profile, launch_profile_async
 from db import config
-from db.db_api import load_profiles, get_profile, flush_wallets
+from db.db_api import load_profiles, get_profile, flush_wallets, get_all_extensions_from_db
 from db.models import db
 from file_functions.Import import import_profiles, import_wallets
+from file_functions.get_ext_ids import get_extension_ids
 from file_functions.utils import get_file_names
 
 
@@ -42,6 +44,7 @@ class SubMenu1(tk.Toplevel):
             ("Import wallets to database for profiles from profiles.xlsx", import_wallets),
             ("Flush all seed phrases and private keys from database", self.on_flush_wallets),
             ("Fetch all extension ids to database", self.on_fetch_extension_ids),
+            ("Clear selected extensions cache", self.on_clear_cache_for_extension),
         ]
 
         for text, command in buttons:
@@ -60,7 +63,7 @@ class SubMenu1(tk.Toplevel):
 
     @staticmethod
     def on_export_cookies():
-        import subprocess
+        # import subprocess
 
         script_path = os.path.join(config.ROOT_DIR, "file_functions", "selected_cookies_from_ads.py")
         subprocess.Popen([sys.executable, script_path])
@@ -72,7 +75,7 @@ class SubMenu1(tk.Toplevel):
         #     # raise FileNotFoundError(f"Папка '{directory_path}' не существует.")
         # else:
         # Запускаем установку в отдельном процессе
-        import subprocess
+        # import subprocess
 
         script_path = os.path.join(config.ROOT_DIR, "file_functions", "import_cookies.py")
         subprocess.Popen([sys.executable, script_path])
@@ -98,12 +101,85 @@ class SubMenu1(tk.Toplevel):
         extension_paths = get_file_names(config.EXTENSIONS_DIR, files=False)
         if extension_paths:
             # Запускаем установку в отдельном процессе
-            import subprocess
+            # import subprocess
 
             script_path = os.path.join(config.ROOT_DIR, "file_functions", "get_ext_ids.py")
             subprocess.Popen([sys.executable, script_path])
         else:
             messagebox.showwarning("Warning", "No extension folders in user_files/extensions!")
+
+    def on_clear_cache_for_extension(self):
+        """Открывает диалог выбора расширений для очистки кэша"""
+        dialog = ExtensionSelectionDialog(self)
+
+
+class PasswordThreadsDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.result = None
+        
+        self.title("Import Settings")
+        
+        # Настройка размеров окна
+        window_width = 300
+        window_height = 150
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x_offset = (screen_width - window_width) // 2
+        y_offset = (screen_height - window_height) // 2
+        self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
+        
+        # Создаем и размещаем элементы
+        frame = tk.Frame(self, padx=20, pady=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Поле для пароля
+        tk.Label(frame, text="Password:").grid(row=0, column=0, sticky='w', pady=5)
+        self.password_entry = tk.Entry(frame) # show="*"
+        self.password_entry.grid(row=0, column=1, sticky='ew', pady=5)
+        self.password_entry.insert(0, "12345678")  # Значение по умолчанию
+        
+        # Поле для количества потоков
+        tk.Label(frame, text="Threads:").grid(row=1, column=0, sticky='w', pady=5)
+        self.threads_entry = tk.Entry(frame)
+        self.threads_entry.grid(row=1, column=1, sticky='ew', pady=5)
+        self.threads_entry.insert(0, "3")  # Значение по умолчанию
+        
+        # Кнопки
+        button_frame = tk.Frame(frame)
+        button_frame.grid(row=2, column=0, columnspan=2, pady=20)
+        
+        tk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Cancel", command=self.on_cancel).pack(side=tk.LEFT, padx=5)
+        
+        # Настройка grid
+        frame.columnconfigure(1, weight=1)
+        
+        # Делаем диалог модальным
+        self.transient(parent)
+        self.grab_set()
+        
+        # Фокус на поле пароля
+        self.password_entry.focus_set()
+        
+        # Привязываем Enter к OK
+        self.bind('<Return>', lambda e: self.on_ok())
+        
+    def on_ok(self):
+        try:
+            threads = int(self.threads_entry.get())
+            if threads <= 0:
+                raise ValueError("Threads must be positive")
+            password = self.password_entry.get()
+            if not password:
+                raise ValueError("Password cannot be empty")
+            self.result = (password, threads)
+            self.destroy()
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+    
+    def on_cancel(self):
+        self.destroy()
 
 
 class SubMenu2(tk.Toplevel):
@@ -114,7 +190,7 @@ class SubMenu2(tk.Toplevel):
 
         # Настройка размеров окна
         window_width = 400
-        window_height = 150
+        window_height = 200
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_offset = (screen_width - window_width) // 2
@@ -122,15 +198,114 @@ class SubMenu2(tk.Toplevel):
         self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
 
         # Создаем и размещаем текст
-        tk.Label(
-            self, 
-            text="Importing Wallets Under Construction...",
-            font=("Arial", 12)
-        ).pack(expand=True)
+        # tk.Label(
+        #     self,
+        #     text="Importing Wallets Under Construction...",
+        #     font=("Arial", 12)
+        # ).pack(expand=True)
+
+        # Создаем фрейм для кнопок
+        button_frame = tk.Frame(self)
+        button_frame.pack(pady=20, padx=20, fill=tk.BOTH, expand=True)
+
+        # Добавляем кнопки
+        buttons = [
+            ("Import seed phrases in Rabby Wallet", self.on_import_seed_rabby),
+            ("Import private keys in Rabby Wallet", self.on_import_pk_rabby),
+            ("Import seed phrases in Phantom Wallet", self.on_import_seed_phantom),
+            ("Import private keys in Phantom Wallet", self.on_import_pk_phantom),
+            # ("Import seed phrases in Backpack Wallet", self.on_export_cookies),
+            # ("Import private keys in Backpack Wallet", self.on_export_cookies),
+        ]
+
+        for text, command in buttons:
+            btn = tk.Button(button_frame, text=text, command=command)
+            btn.pack(pady=5, fill=tk.X)
 
         # Делаем диалог модальным
         self.transient(parent)
         self.grab_set()
+
+
+    def on_import_seed_rabby(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+        # import subprocess
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "rabby.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'seed',  # тип импорта
+                password,
+                str(threads)
+            ])
+
+    def on_import_pk_rabby(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+        # import subprocess
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "rabby.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'pk',  # тип импорта
+                password,
+                str(threads)
+            ])
+
+    def on_import_seed_phantom(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+        # import subprocess
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "phantom.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'seed',  # тип импорта
+                password,
+                str(threads)
+            ])
+
+    def on_import_pk_phantom(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+        # import subprocess
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "phantom.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'pk',  # тип импорта
+                password,
+                str(threads)
+            ])
 
 
 class ProfileManager:
@@ -342,14 +517,8 @@ class ProfileManager:
         # Форматируем примечание
         note = profile.note if profile.note else ""
         note = f"{note[:30]}..." if len(note) > 30 else note
-#
-        # Максимум 27 символов в прокси
-        # минимум 23
-        #
-
-        # formatted_string =
         
-        return f"{name} │ {proxy} │ {note}"
+        return f"{name} │ {proxy} {note}" # todo: разобраться с пайпом после прокси
 
     # Добавим метод для редактирования примечания
     def edit_note(self, event=None):
@@ -385,60 +554,144 @@ class ProfileManager:
             self.context_menu.grab_release()
 
 
-class ExtensionDialog(tk.Toplevel):
+class ExtensionSelectionDialog(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
-        self.result = None
+        self.selected_extensions = []
         
-        self.title("Install Extension")
+        self.title("Select Extensions")
         
         # Настройка размеров окна
-        window_width = 500
-        window_height = 150
+        window_width = 400
+        window_height = 300
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_offset = (screen_width - window_width) // 2
         y_offset = (screen_height - window_height) // 2
         self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
         
-        # Создаем и размещаем элементы
-        tk.Label(self, text="Installing extension...\nPlease wait while the extension is being installed in all profiles.").pack(pady=20)
+        # Создаем основной фрейм
+        main_frame = tk.Frame(self, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Заголовок
+        tk.Label(
+            main_frame,
+            text="Select extensions to clear cache:",
+            font=("Arial", 12, "bold")
+        ).pack(pady=(0, 10))
+        
+        # Фрейм для списка с прокруткой
+        list_frame = tk.Frame(main_frame)
+        list_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Добавляем скроллбар
+        scrollbar = tk.Scrollbar(list_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Создаем список расширений
+        self.extension_list = tk.Listbox(
+            list_frame,
+            selectmode=tk.MULTIPLE,
+            font=("Arial", 10),
+            activestyle='none',
+            selectbackground='#0078D7',
+            selectforeground='white'
+        )
+        self.extension_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Привязываем скроллбар к списку
+        scrollbar.config(command=self.extension_list.yview)
+        self.extension_list.config(yscrollcommand=scrollbar.set)
+        
+        # Загружаем список расширений
+        self.load_extensions()
+        
+        # Кнопки
+        button_frame = tk.Frame(main_frame)
+        button_frame.pack(pady=(20, 0))
+        
+        tk.Button(
+            button_frame,
+            text="Clear Selected",
+            command=self.on_clear_selected
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            button_frame,
+            text="Clear All",
+            command=self.on_clear_all
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(
+            button_frame,
+            text="Cancel",
+            command=self.destroy
+        ).pack(side=tk.LEFT, padx=5)
         
         # Делаем диалог модальным
         self.transient(parent)
         self.grab_set()
         
-        # Обновляем окно
-        self.update()
-
-    def on_install_extension(self):
-        """Открывает диалог для установки расширения"""
-        extension_url = tk.simpledialog.askstring(
-            "Install Extension",
-            "Enter Chrome Web Store link:\n" +
-            "(e.g. https://chromewebstore.google.com/detail/rabby-wallet/acmacodkjbdgmoleebolmdjonilkdbch)"
-        )
+        # Ждем, пока окно не будет закрыто
+        parent.wait_window(self)
+    
+    def load_extensions(self):
+        """Загружает список расширений из БД"""
+        extensions = get_all_extensions_from_db()
+        for ext in extensions:
+            self.extension_list.insert(tk.END, f"{ext.name} ({ext.extension_id})")
+            
+    def get_selected_extension_ids(self):
+        """Возвращает ID выбранных расширений"""
+        selected_indices = self.extension_list.curselection()
+        extensions = get_all_extensions_from_db()
+        selected_extensions = []
         
-        if extension_url:
-            # Показываем информационное окно
-            dialog = ExtensionDialog(self)
+        for idx in selected_indices:
+            selected_extensions.append(extensions[idx].extension_id)
             
-            # Запускаем установку в отдельном процессе
-            import subprocess
-            import sys
-            import os
+        return selected_extensions
+    
+    def clear_cache_for_extensions(self, extension_ids):
+        """Очищает кэш для выбранных расширений"""
+        profiles = load_profiles()
+        cleared_count = 0
+        
+        for profile in profiles:
+            for ext_id in extension_ids:
+                cache_path = os.path.join(
+                    config.USER_DATA_DIR,
+                    profile.name,
+                    "Default",
+                    "Local Extension Settings",
+                    ext_id
+                )
+                try:
+                    if os.path.exists(cache_path):
+                        import shutil
+                        shutil.rmtree(cache_path)
+                        cleared_count += 1
+                except Exception as e:
+                    logger.error(f"Error clearing cache for {ext_id} in {profile.name}: {e}")
+        
+        return cleared_count
+    
+    def on_clear_selected(self):
+        """Обработчик нажатия кнопки Clear Selected"""
+        selected_ids = self.get_selected_extension_ids()
+        if not selected_ids:
+            messagebox.showwarning("Warning", "Please select at least one extension")
+            return
             
-            script_path = os.path.join(os.path.dirname(__file__), "file_functions", "install_extensions.py")
-            process = subprocess.Popen([sys.executable, script_path, extension_url])
-            
-            # Периодически проверяем, завершился ли процесс
-            def check_process():
-                if process.poll() is None:
-                    # Процесс еще работает, проверяем снова через 1 секунду
-                    self.after(1000, check_process)
-                else:
-                    # Процесс завершен, закрываем диалог
-                    dialog.destroy()
-            
-            # Начинаем проверку
-            check_process()
+        cleared = self.clear_cache_for_extensions(selected_ids)
+        messagebox.showinfo("Success", f"Cleared cache in {cleared} locations")
+        self.destroy()
+    
+    def on_clear_all(self):
+        """Обработчик нажатия кнопки Clear All"""
+        extensions = get_all_extensions_from_db()
+        extension_ids = [ext.extension_id for ext in extensions]
+        cleared = self.clear_cache_for_extensions(extension_ids)
+        messagebox.showinfo("Success", f"Cleared cache in {cleared} locations")
+        self.destroy()

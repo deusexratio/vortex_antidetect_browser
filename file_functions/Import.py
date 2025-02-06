@@ -3,11 +3,8 @@ import os.path
 from openpyxl.reader.excel import load_workbook
 from better_proxy import Proxy
 from loguru import logger
-from fake_useragent import UserAgent
-from browserforge.fingerprints import FingerprintGenerator, ScreenFingerprint, Screen
+from browserforge.fingerprints import FingerprintGenerator, Screen
 from browserforge.headers import Browser
-from browserforge.injectors.utils import InjectFunction
-
 
 from db import config
 from db.config import USER_DATA_DIR

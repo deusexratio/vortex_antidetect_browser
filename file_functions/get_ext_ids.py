@@ -85,10 +85,17 @@ async def get_extension_ids(context: BrowserContext) -> dict[str, Any | None] | 
 async def run(playwright: Playwright, extension_paths: list[str]):
     profile = load_profiles()[0]
 
+    args = []
+    if extension_paths:
+        extension_paths = ",".join(extension_paths)  # Объединяем все пути через запятую
+        extension_arg = f"--load-extension={extension_paths}"
+        args.append(extension_arg)
+        logger.debug(f"Loading extensions: {extension_arg}")
+
     context = await playwright.chromium.launch_persistent_context(
         profile.user_data_dir,
         headless=False,
-        args=[f"--load-extension={extension_path}" for extension_path in extension_paths],
+        args=args,
     )
 
     ext_ids = await get_extension_ids(context=context)

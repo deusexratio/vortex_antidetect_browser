@@ -8,6 +8,7 @@ else:
     ROOT_DIR = Path(__file__).parent.parent.absolute()
 
 DB_FOLDER_DIR = os.path.join(ROOT_DIR, 'db')
+LOG_FILE = os.path.join(ROOT_DIR, 'log.txt')
 DB_DIR = os.path.join(DB_FOLDER_DIR, 'profiles.db')
 USER_DATA_DIR = os.path.join(DB_FOLDER_DIR, 'browser_data')
 ASSETS_DIR = os.path.join(DB_FOLDER_DIR, 'assets')

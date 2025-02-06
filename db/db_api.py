@@ -1,4 +1,4 @@
-from db.models import db, Profile, Wallets
+from db.models import db, Profile, Wallets, Extension
 
 
 def load_profiles(sqlite_query: bool = False) -> list[Profile]:
@@ -32,3 +32,12 @@ def flush_wallets():
     all_wallets = load_wallets()
     for wallets in all_wallets:
         db.delete(wallets)
+
+def get_extension_id(extension_name: str):
+    extensions = db.all(entities=Extension)
+    for extension in extensions:
+        if extension_name.lower() in extension.name.lower():
+            return extension.extension_id
+
+def get_all_extensions_from_db():
+    return db.all(entities=Extension)

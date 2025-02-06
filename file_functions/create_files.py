@@ -1,4 +1,5 @@
 import os
+import sys
 from dataclasses import dataclass
 
 from better_proxy import Proxy
@@ -6,9 +7,10 @@ from browserforge.fingerprints import Fingerprint
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Side, Border
 from openpyxl.worksheet.worksheet import Worksheet
+from loguru import logger
 
 from db import config
-from file_functions.utils import touch, write_json, read_json, update_dict
+from file_functions.utils import touch
 
 
 @dataclass
@@ -50,6 +52,10 @@ class WalletXLSX:
 
 
 def create_files():
+    logger.remove()
+    logger.add(config.LOG_FILE, rotation="10 MB")
+    logger.add(sys.stderr)
+
     touch(path=config.USER_FILES_DIR)
     touch(path=config.USER_DATA_DIR)
     touch(path=config.EXTENSIONS_DIR)
