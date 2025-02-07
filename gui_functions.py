@@ -4,6 +4,8 @@ import os
 import tkinter as tk
 import traceback
 from tkinter import messagebox, simpledialog
+
+from better_proxy import Proxy
 from loguru import logger
 from typing import Dict, Any
 import subprocess
@@ -11,9 +13,8 @@ import subprocess
 from browser_functions.functions import close_profile, launch_profile_async
 from db import config
 from db.db_api import load_profiles, get_profile, flush_wallets, get_all_extensions_from_db
-from db.models import db
+from db.models import db, Profile
 from file_functions.Import import import_profiles, import_wallets
-from file_functions.get_ext_ids import get_extension_ids
 from file_functions.utils import get_file_names
 
 
@@ -70,12 +71,7 @@ class SubMenu1(tk.Toplevel):
 
     @staticmethod
     def on_import_cookies():
-        # if not os.path.exists(config.COOKIES_TABLE):
-        #     messagebox.showwarning("Warning", f"Not found table with cookies, should be: {config.COOKIES_TABLE}!")
-        #     # raise FileNotFoundError(f"Папка '{directory_path}' не существует.")
-        # else:
         # Запускаем установку в отдельном процессе
-        # import subprocess
 
         script_path = os.path.join(config.ROOT_DIR, "file_functions", "import_cookies.py")
         subprocess.Popen([sys.executable, script_path])
@@ -101,7 +97,6 @@ class SubMenu1(tk.Toplevel):
         extension_paths = get_file_names(config.EXTENSIONS_DIR, files=False)
         if extension_paths:
             # Запускаем установку в отдельном процессе
-            # import subprocess
 
             script_path = os.path.join(config.ROOT_DIR, "file_functions", "get_ext_ids.py")
             subprocess.Popen([sys.executable, script_path])
@@ -231,7 +226,6 @@ class SubMenu2(tk.Toplevel):
         # Показываем диалог для ввода параметров
         dialog = PasswordThreadsDialog(self)
         self.wait_window(dialog)
-        # import subprocess
 
         # Если пользователь нажал OK и ввел данные
         if dialog.result:
@@ -251,7 +245,6 @@ class SubMenu2(tk.Toplevel):
         # Показываем диалог для ввода параметров
         dialog = PasswordThreadsDialog(self)
         self.wait_window(dialog)
-        # import subprocess
 
         # Если пользователь нажал OK и ввел данные
         if dialog.result:
@@ -271,7 +264,6 @@ class SubMenu2(tk.Toplevel):
         # Показываем диалог для ввода параметров
         dialog = PasswordThreadsDialog(self)
         self.wait_window(dialog)
-        # import subprocess
 
         # Если пользователь нажал OK и ввел данные
         if dialog.result:
@@ -291,7 +283,6 @@ class SubMenu2(tk.Toplevel):
         # Показываем диалог для ввода параметров
         dialog = PasswordThreadsDialog(self)
         self.wait_window(dialog)
-        # import subprocess
 
         # Если пользователь нажал OK и ввел данные
         if dialog.result:
@@ -388,7 +379,8 @@ class ProfileManager:
         # Добавляем контекстное меню
         self.context_menu = tk.Menu(self.root, tearoff=0)
         self.context_menu.add_command(label="Edit Note", command=self.edit_note)
-        
+        self.context_menu.add_command(label="Edit Proxy", command=self.edit_proxy)
+
         # Привязываем правый клик к показу меню
         self.profile_list.bind('<Button-3>', self.show_context_menu)
 
@@ -465,10 +457,43 @@ class ProfileManager:
             profile = get_profile(profile_name)
             if profile:
                 logger.debug(f"Launching profile {profile_name}...")
+                # Запускаем профиль и обновляем список после запуска
                 asyncio.run_coroutine_threadsafe(
-                    launch_profile_async(profile, self.extensions),
+                    self.launch_and_update(profile),
                     self.loop
                 )
+
+    async def launch_and_update(self, profile):
+        """Запускает профиль и обновляет список"""
+        try:
+            await launch_profile_async(profile, self.extensions)
+            logger.debug(f"Profile {profile.name} closed")
+            # Обновляем список профилей
+            self.update_profile_list()
+        except Exception as e:
+            logger.error(f"Error launching profile {profile.name}: {e}")
+
+    def update_profile_list(self):
+        """Обновляет список профилей"""
+        # Сохраняем текущее выделение
+        current_selection = self.profile_list.curselection()
+        
+        # Очищаем список
+        self.profile_list.delete(0, tk.END)
+        self.profile_map.clear()
+        
+        # Перезагружаем профили
+        for profile in load_profiles():
+            display_text = self.format_profile_display(profile)
+            self.profile_list.insert(tk.END, display_text)
+            self.profile_map[self.profile_list.size() - 1] = profile.name
+        
+        # Восстанавливаем выделение, если оно было
+        if current_selection:
+            try:
+                self.profile_list.selection_set(current_selection)
+            except:
+                pass
 
     def on_close(self):
         selected_profiles = [self.profile_list.get(idx) for idx in self.profile_list.curselection()]
@@ -499,10 +524,12 @@ class ProfileManager:
                 break
         self.running = False
 
-    def format_profile_display(self, profile):
+    def format_profile_display(self, profile: Profile):
         """Форматирует строку для отображения профиля"""
         name = f"{profile.name:<20}"  # Имя профиля, минимум 20 символов
-        
+
+        last_opening_time = f"{profile.last_opening_time}"
+
         # Форматируем прокси для отображения
         proxy = profile.proxy if profile.proxy else "No proxy"
         if proxy != "No proxy":
@@ -518,7 +545,7 @@ class ProfileManager:
         note = profile.note if profile.note else ""
         note = f"{note[:30]}..." if len(note) > 30 else note
         
-        return f"{name} │ {proxy} {note}" # todo: разобраться с пайпом после прокси
+        return f"{name} │ {last_opening_time} │ {proxy} {note}" # todo: разобраться с пайпом после прокси
 
     # Добавим метод для редактирования примечания
     def edit_note(self, event=None):
@@ -530,11 +557,30 @@ class ProfileManager:
             if profile:
                 new_note = simpledialog.askstring(
                     "Edit Note",
-                    "Enter note for profile:",
+                    "Enter note for profile:\t\t\t\t\t",
                     initialvalue=profile.note or ""
                 )
                 if new_note is not None:  # None если пользователь нажал Cancel
                     profile.note = new_note
+                    db.commit()
+                    # Обновляем отображение
+                    self.profile_list.delete(index)
+                    self.profile_list.insert(index, self.format_profile_display(profile))
+
+    def edit_proxy(self, event=None):
+        selection = self.profile_list.curselection()
+        if selection:
+            index = selection[0]
+            profile_name = self.profile_map[index]
+            profile = get_profile(profile_name)
+            if profile:
+                new_proxy = simpledialog.askstring(
+                    "Edit Proxy",
+                    "Enter new proxy for profile:\t\t\t\t\t\t\t",
+                    initialvalue=profile.proxy or ""
+                )
+                if new_proxy is not None:  # None если пользователь нажал Cancel
+                    profile.proxy = Proxy.from_str(new_proxy).as_url
                     db.commit()
                     # Обновляем отображение
                     self.profile_list.delete(index)

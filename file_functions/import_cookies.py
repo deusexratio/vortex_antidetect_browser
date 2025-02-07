@@ -1,12 +1,8 @@
 import asyncio
-import json
 import os.path
 import traceback
-import re
 
-from better_proxy import Proxy
-from openpyxl.reader.excel import load_workbook
-from patchright.async_api import async_playwright
+from playwright.async_api import async_playwright
 from loguru import logger
 
 from db import config

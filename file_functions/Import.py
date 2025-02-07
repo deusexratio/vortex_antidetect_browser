@@ -135,15 +135,11 @@ def import_profiles():
 
     for profile in profiles:
         profile_instance = get_profile(name=profile.name)
-        if profile_instance and (
-                profile_instance.proxy != profile.proxy or
-                profile_instance.name != profile.name or
-                profile_instance.fingerprint != profile.name
-        ):
-            profile_instance.proxy = profile.proxy
-            profile_instance.fingerprint = profile.fingerprint
-            profile_instance.user_data_dir = profile.user_data_dir
-            # profile_instance.name = profile.name
+
+        if profile_instance and profile_instance.proxy != profile.proxy.as_url:
+            profile_instance.proxy = profile.proxy.as_url
+            print(f"{profile.name}, old proxy {profile_instance.proxy}, new proxy {profile.proxy.as_url}")
+
             db.commit()
             edited.append(profile_instance)
 
@@ -153,11 +149,12 @@ def import_profiles():
                 proxy=profile.proxy.as_url,
                 page_urls=[''],
                 fingerprint=profile.fingerprint.dumps(),
-                user_data_dir=profile.user_data_dir
+                user_data_dir=profile.user_data_dir,
+                # last_opening_time=None,
             )
             db.insert(profile_instance)
             imported.append(profile_instance)
-            print(profile_instance)
+            logger.debug(profile_instance)
 
     logger.success(f'Done! imported profiles: {len(imported)}/{total}; '
                    f'edited profiles: {len(edited)}/{total}; total: {total}')

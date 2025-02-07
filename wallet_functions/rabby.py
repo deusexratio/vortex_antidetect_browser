@@ -5,8 +5,8 @@ import time
 from asyncio import Semaphore
 
 from loguru import logger
-from patchright._impl._errors import TargetClosedError
-from patchright.async_api import async_playwright, expect
+from playwright._impl._errors import TargetClosedError
+from playwright.async_api import async_playwright, expect
 
 from db import config
 from db.db_api import load_profiles, get_extension_id, get_wallets_by_name
@@ -23,6 +23,7 @@ if extension_paths:
     extension_paths = ",".join(extension_paths)  # Объединяем все пути через запятую
     extension_arg = f"--load-extension={extension_paths}"
     args.append(extension_arg)
+    args.append(f"--disable-extensions-except={extension_paths}", )
     logger.debug(f"Loading extensions: {extension_arg}")
 logger.debug(f'args: {args}')
 
@@ -44,7 +45,7 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                 context = await p.chromium.launch_persistent_context(
                     user_data_dir=profile.user_data_dir,
                     headless=False,
-                    channel='chrome',
+                    # channel='chrome',
                     args=args
                 )
                 rabby_page = await context.new_page()

@@ -211,10 +211,10 @@ def main():
         messagebox.showinfo("Installation", "Installing dependencies...")
         install_dependencies(pip_path)
         
-        # Устанавливаем patchright
-        messagebox.showinfo("Installation", "Installing Patchright...")
-        subprocess.run([pip_path, "install", "patchright"], check=True)
-        subprocess.run([python_path, "-m", "patchright", "install"], check=True)
+        # Устанавливаем playwright
+        messagebox.showinfo("Installation", "Installing Playwright...")
+        subprocess.run([pip_path, "install", "playwright"], check=True)
+        subprocess.run([python_path, "-m", "playwright", "install"], check=True)
 
         # Создаем ярлык/desktop entry и скрипт запуска
         main_script = os.path.join(current_dir, "main.py")

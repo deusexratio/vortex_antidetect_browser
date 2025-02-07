@@ -1,16 +1,19 @@
 import asyncio
 import json
-import threading
+from datetime import datetime
 from random import randrange
 
 from better_proxy import Proxy
-from browserforge.injectors.utils import utils_js
-from patchright.async_api import async_playwright, Page
+from browserforge.injectors.utils import utils_js, only_injectable_headers
+from playwright.async_api import async_playwright, Page
 from loguru import logger
 
+from browser_functions.path import StealthPlaywrightPatcher
 from db.models import Profile, db
 from browser_functions.cookie_utils import sanitize_cookie_value, convert_cookies_to_playwright_format
 
+
+StealthPlaywrightPatcher().apply_patches()
 
 async def close_page_with_delay(page: Page, delay: float) -> None:
     await asyncio.sleep(delay)
@@ -19,12 +22,12 @@ async def close_page_with_delay(page: Page, delay: float) -> None:
     except Exception:
         pass
 
-async def launch_profile_async(profile: Profile, extensions: list[str], keep_open: bool = True): 
+async def launch_profile_async(profile: Profile, extensions: list[str] | None, keep_open: bool = True):
     logger.debug(f"Starting profile {profile.name}...")
     try:
         async with async_playwright() as p:
             fingerprint = json.loads(profile.fingerprint)
-            print(fingerprint)
+
             args = [
                 # '--disable-blink-features=AutomationControlled',
                 # '--start-maximized',
@@ -33,7 +36,7 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                 # '--disable-infobars',
                 # '--disable-dev-shm-usage',
                 # '--disable-blink-features',
-                # '--disable-blink-features=AutomationControlled',
+                '--disable-blink-features=AutomationControlled',
                 # '--disable-features=IsolateOrigins,site-per-process',
                 # '--ignore-certificate-errors',
                 # '--enable-features=NetworkService,NetworkServiceInProcess',
@@ -42,7 +45,7 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                 # '--allow-running-insecure-content',
                 # '--disable-site-isolation-trials',
                 # f'--window-size={fingerprint["screen"]["width"]},{fingerprint["screen"]["height"]}',
-                '--app-name="Vortex Browser"',
+                # '--app-name="Vortex Browser"',
                 f'--window-name={profile.name}',
                 f'--lang=en-US' # todo: add to settings
             ]
@@ -52,6 +55,7 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                 extension_arg = f"--load-extension={extension_paths}"
                 args.append(extension_arg)
                 logger.debug(f"Loading extensions: {extension_arg}")
+                args.append(f"--disable-extensions-except={extension_paths}",)
 
             if profile.proxy:
                 proxy = Proxy.from_str(profile.proxy).as_playwright_proxy
@@ -62,41 +66,43 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                 user_data_dir=profile.user_data_dir,
                 headless=False,
                 args=args,
-                channel='chrome',
-                # user_agent=fingerprint["navigator"]["userAgent"],
+                # channel='chrome',
+                user_agent=fingerprint["navigator"]["userAgent"],
                 proxy=proxy,
                 color_scheme='dark',
                 no_viewport=True,
-                # extra_http_headers={
-                #     'Accept-Language': fingerprint['headers'].get('Accept-Language', 'en-US,en;q=0.9'),
-                #     'sec-ch-ua': '"Google Chrome";v="117", "Not;A=Brand";v="8", "Chromium";v="117"',
-                #     'sec-ch-ua-mobile': '?0',
-                #     'sec-ch-ua-platform': '"Windows"',
-                #     **fingerprint['headers']
-                # },
-                # ignore_default_args=[
-                #     '--disable-component-extensions-with-background-pages',
-                #     '--enable-automation',
-                # ],
-                # # bypass_csp=True,
-                # # ignore_https_errors=True,
-                # permissions=['geolocation', 'notifications', 'camera', 'microphone'],
-                # timezone_id=None, # todo: add timezone to settings
-                # locale='en-US', # todo: add to settings
+                extra_http_headers=only_injectable_headers(headers={
+                    'Accept-Language': fingerprint['headers'].get('Accept-Language', 'en-US,en;q=0.9'),
+                    **fingerprint['headers']
+                }, browser_name='chrome'
+                ),
+                ignore_default_args=[
+                    '--enable-automation',
+                    '--no-sandbox',
+                    # '--disable-blink-features=AutomationControlled',
+                ],
+                bypass_csp=True,
+                ignore_https_errors=True,
+                permissions=['geolocation', 'notifications', 'camera', 'microphone'],
+                timezone_id=None, # todo: add timezone to settings
+                locale='en-US', # todo: add to settings
             )
 
+            profile.last_opening_time = datetime.now().replace(microsecond=0)
+            db.commit()
+
             try:
-                await context.add_init_script("""
-                                                Object.defineProperty(navigator, 'webdriver', {
-                                                    get: () => undefined
-                                                });
-                                                Object.defineProperty(navigator, 'automationControlled', {
-                                                    get: () => false
-                                                });
-                                                window.chrome = {
-                                                    runtime: {}
-                                                };
-                                            """)
+                # await context.add_init_script("""
+                #                                 Object.defineProperty(navigator, 'webdriver', {
+                #                                     get: () => undefined
+                #                                 });
+                #                                 Object.defineProperty(navigator, 'automationControlled', {
+                #                                     get: () => false
+                #                                 });
+                #                                 window.chrome = {
+                #                                     runtime: {}
+                #                                 };
+                #                             """)
                 # await context.add_init_script(InjectFunction(fingerprint))
 
                 if keep_open:
@@ -106,14 +112,17 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                         page = await context.new_page()
                         try:
                             await page.goto(page_url)
-                        except:
-                            pass
+                        except Exception as e:
+                            logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
+                            await asyncio.sleep(60)
+                            if 'ERR_TIMED_OUT' in str(e):
+                                logger.error(f"Profile {profile.name} proxy doesn't work")
+                            await page.goto('http://eth0.me/')
 
                     # Закрываем стартовую about:blank
                     for page in context.pages:
                         if page.url == 'about:blank':
                             await page.close()
-
 
                     while True:
                         await asyncio.sleep(0.25)
@@ -124,7 +133,9 @@ async def launch_profile_async(profile: Profile, extensions: list[str], keep_ope
                         profile.page_urls = [
                             page.url
                             for page in pages
-                            if (page.url != 'about:blank' and "chrome-extension://" not in page.url)
+                            if (page.url != 'about:blank' and
+                                "chrome-extension://" not in page.url and
+                                "chrome-error://" not in page.url)
                         ]
                 else:
                     return context

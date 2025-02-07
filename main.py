@@ -1,6 +1,5 @@
 import asyncio
 import threading
-from loguru import logger
 
 from file_functions.create_files import create_files
 from gui_functions import ProfileManager

@@ -1,0 +1,5 @@
+v1.0.2
+- Changed Patchright lib to vanilla Playwright with patch
+- Changed browser channeling to Chromium
+- Added changing proxy and notes right-clicking on profile
+- Added showing last opening time and updating

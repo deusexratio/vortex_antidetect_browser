@@ -2,7 +2,7 @@ import asyncio
 import sys
 from typing import Any
 
-from patchright.async_api import async_playwright, Playwright, BrowserContext
+from playwright.async_api import async_playwright, Playwright, BrowserContext
 from loguru import logger
 
 from db import config
@@ -90,12 +90,14 @@ async def run(playwright: Playwright, extension_paths: list[str]):
         extension_paths = ",".join(extension_paths)  # Объединяем все пути через запятую
         extension_arg = f"--load-extension={extension_paths}"
         args.append(extension_arg)
+        args.append(f"--disable-extensions-except={extension_paths}", )
         logger.debug(f"Loading extensions: {extension_arg}")
 
     context = await playwright.chromium.launch_persistent_context(
         profile.user_data_dir,
         headless=False,
         args=args,
+        # channel='chrome'
     )
 
     ext_ids = await get_extension_ids(context=context)

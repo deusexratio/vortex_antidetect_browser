@@ -1,11 +1,10 @@
 import asyncio
-import os.path
 import sys
 import time
 
 import requests
 from openpyxl.reader.excel import load_workbook
-from patchright.async_api import async_playwright, Cookie
+from playwright.async_api import async_playwright, Cookie
 from loguru import logger
 
 from db import config
