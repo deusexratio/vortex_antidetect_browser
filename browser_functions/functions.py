@@ -8,7 +8,7 @@ from browserforge.injectors.utils import utils_js, only_injectable_headers
 from playwright.async_api import async_playwright, Page
 from loguru import logger
 
-from browser_functions.path import StealthPlaywrightPatcher
+from browser_functions.patch import StealthPlaywrightPatcher
 from db.models import Profile, db
 from browser_functions.cookie_utils import sanitize_cookie_value, convert_cookies_to_playwright_format
 
@@ -113,11 +113,12 @@ async def launch_profile_async(profile: Profile, extensions: list[str] | None, k
                         try:
                             await page.goto(page_url)
                         except Exception as e:
-                            logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
-                            await asyncio.sleep(60)
+                            # logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
+                            # await asyncio.sleep(60)
                             if 'ERR_TIMED_OUT' in str(e):
                                 logger.error(f"Profile {profile.name} proxy doesn't work")
-                            await page.goto('http://eth0.me/')
+                                break
+                            # await page.goto('http://eth0.me/')
 
                     # Закрываем стартовую about:blank
                     for page in context.pages:

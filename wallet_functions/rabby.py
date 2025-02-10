@@ -70,9 +70,14 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                 if seed_or_pk == 'pk':
                     await rabby_page.get_by_text('Private Key').click(timeout=3000)
                     await rabby_page.get_by_placeholder('Input private key').fill(pk)
+                    confirm_button = rabby_page.locator('//button').last
+                    await confirm_button.click(timeout=3000)
 
-                await rabby_page.get_by_placeholder("8 characters min").fill(password)
-                await rabby_page.get_by_placeholder("Password").fill(password)
+                try:
+                    await rabby_page.get_by_placeholder("8 characters min").fill(password, timeout=5000)
+                    await rabby_page.get_by_placeholder("Password").fill(password, timeout=5000)
+                except:
+                    logger.info(f"Profile {profile.name} {seed_or_pk} was already added")
 
                 await asyncio.sleep(1)
                 try:

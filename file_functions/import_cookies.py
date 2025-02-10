@@ -51,22 +51,16 @@ async def import_cookies():
     async with async_playwright() as playwright:
         for profile in load_profiles():
             try:
-                # if profile.proxy:
-                #     proxy = Proxy.from_str(profile.proxy).as_playwright_proxy
-                # else:
-                #     proxy = None
                 logger.debug(f"Starting to import cookies for profile {profile.name}")
                 context = await playwright.chromium.launch_persistent_context(
                     profile.user_data_dir,
                     headless=True,
-                    # proxy=proxy
                 )
 
                 cookies = get_cookies_for_profile(profile)
                 if cookies:
                     await context.add_cookies(cookies)
                     logger.success(f"Imported cookies for profile {profile.name}")
-                    # await asyncio.sleep(1000)
 
                 else:
                     logger.info(f"Empty cookies json for profile {profile.name}")

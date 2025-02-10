@@ -3,3 +3,9 @@ v1.0.2
 - Changed browser channeling to Chromium
 - Added changing proxy and notes right-clicking on profile
 - Added showing last opening time and updating
+
+v1.0.3
+- Fix Rabby private key import
+- Add importing X and Discord cookies from sheet Profiles
+- Add modules submenu and TurboTap module in development
+- Fix patch file absence

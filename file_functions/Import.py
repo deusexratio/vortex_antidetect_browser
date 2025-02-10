@@ -1,4 +1,7 @@
+import json
 import os.path
+import random
+from datetime import datetime, timedelta
 
 from openpyxl.reader.excel import load_workbook
 from better_proxy import Proxy
@@ -18,7 +21,7 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
     profiles = []
     workbook = load_workbook(excel_path)
     sheet = workbook["Profiles"]
-    rows = sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=1, max_col=5, values_only=True)
+    rows = sheet.iter_rows(min_row=2, max_row=sheet.max_row, min_col=1, max_col=6, values_only=True)
     for row in rows:
         if row[0]:
             name = str(row[0])
@@ -40,11 +43,46 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
                     screen=Screen(min_width=1000, min_height=600, max_width=1920, max_height=1080)
                 ).generate()
 
-            user_data_dir = os.path.join(USER_DATA_DIR, name)
+            if row[3]:
+                user_data_dir = str(row[3])
+            else:
+                user_data_dir = os.path.join(USER_DATA_DIR, name)
+
+            if row[4] and len(row[4]) == 40:
+                x_cookie = [{'name': 'auth_token',
+                          'value': row[4],
+                          'domain': '.twitter.com', 'path': '/',
+                          'expires': int((datetime.now() + timedelta(days=random.randint(300, 350))).timestamp()),
+                          'httpOnly': True, 'secure': True, 'sameSite': 'None'}]
+            # or if you put cookie in a string it is loaded into json
+            elif row[4] and len(row[4]) > 40:
+                x_cookie = json.loads(row[4].replace("'", '"')
+                                    .replace('True', "true")
+                                    .replace('False', "false")
+                                    )
+            else:
+                x_cookie = None
+
+            if row[5] and len(row[5]) == 72: # todo: ПРОВЕРИТЬ ДЛИНУ
+                discord_cookie = [{'name': 'token',
+                          'value': row[5],
+                          'domain': '.discord.com', 'path': '/',
+                          'expires': int((datetime.now() + timedelta(days=random.randint(400, 450))).timestamp()),
+                          'httpOnly': False, 'secure': True, 'sameSite': 'None'}]
+            # or if you put cookie in a string it is loaded into json
+            elif row[5] and len(row[5]) > 40:
+                discord_cookie = json.loads(row[5].replace("'", '"')
+                                    .replace('True', "true")
+                                    .replace('False', "false")
+                                    )
+            else:
+                discord_cookie = None
+
             touch(user_data_dir)
 
             profiles.append(
-                ProfileXLSX(name=name, proxy=proxy, fingerprint=fingerprint, user_data_dir=user_data_dir)
+                ProfileXLSX(name=name, proxy=proxy, fingerprint=fingerprint, user_data_dir=user_data_dir,
+                            x_cookie=x_cookie, discord_cookie=discord_cookie)
             )
 
     return profiles
@@ -137,8 +175,8 @@ def import_profiles():
         profile_instance = get_profile(name=profile.name)
 
         if profile_instance and profile_instance.proxy != profile.proxy.as_url:
-            profile_instance.proxy = profile.proxy.as_url
             print(f"{profile.name}, old proxy {profile_instance.proxy}, new proxy {profile.proxy.as_url}")
+            profile_instance.proxy = profile.proxy.as_url
 
             db.commit()
             edited.append(profile_instance)

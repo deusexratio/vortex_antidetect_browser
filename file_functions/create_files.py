@@ -15,17 +15,21 @@ from file_functions.utils import touch
 
 @dataclass
 class ProfileXLSX:
-    header = ['Name', 'Proxy', 'Fingerprint (autogenerates)', 'Profile Directory (autogenerates)']
+    header = ['Name', 'Proxy', 'Fingerprint (autogenerates)', 'Profile Directory (autogenerates)', 'X Token', 'Discord token']
 
     def __init__(self, name: str,
                  user_data_dir: str,
                  proxy: str | Proxy = '',
                  fingerprint: str | Fingerprint = '',
+                 x_cookie: str | None = None,
+                 discord_cookie: str | None = None,
                  ):
         self.name = name
         self.proxy = proxy
         self.fingerprint = fingerprint
         self.user_data_dir = user_data_dir
+        self.x_cookie = x_cookie
+        self.discord_cookie = discord_cookie
 
 
 @dataclass

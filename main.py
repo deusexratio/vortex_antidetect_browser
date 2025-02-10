@@ -2,7 +2,7 @@ import asyncio
 import threading
 
 from file_functions.create_files import create_files
-from gui_functions import ProfileManager
+from gui_functions.profile_manager import ProfileManager
 
 
 def main():
