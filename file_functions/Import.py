@@ -49,11 +49,18 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
                 user_data_dir = os.path.join(USER_DATA_DIR, name)
 
             if row[4] and len(row[4]) == 40:
-                x_cookie = [{'name': 'auth_token',
+                x_cookie = [
+                    {'name': 'auth_token',
                           'value': row[4],
                           'domain': '.twitter.com', 'path': '/',
                           'expires': int((datetime.now() + timedelta(days=random.randint(300, 350))).timestamp()),
-                          'httpOnly': True, 'secure': True, 'sameSite': 'None'}]
+                          'httpOnly': True, 'secure': True, 'sameSite': 'None'},
+                    {'name': 'auth_token',
+                     'value': row[4],
+                     'domain': '.x.com', 'path': '/',
+                     'expires': int((datetime.now() + timedelta(days=random.randint(300, 350))).timestamp()),
+                     'httpOnly': True, 'secure': True, 'sameSite': 'None'},
+                            ]
             # or if you put cookie in a string it is loaded into json
             elif row[4] and len(row[4]) > 40:
                 x_cookie = json.loads(row[4].replace("'", '"')

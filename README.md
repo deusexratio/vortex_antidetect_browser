@@ -1,6 +1,6 @@
 # Vortex Antidetect Browser
 
-![logo](./db/assets/mini_logo.png)  
+![logo](./db/assets/Vortex-logo-white.png)  
 
 ## Join my Telegram channel:  
 CHANNEL: [fastfoodsofts](https://t.me/fastfoodsofts)  

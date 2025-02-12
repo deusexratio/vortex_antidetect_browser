@@ -4,6 +4,17 @@ import random
 from decimal import Decimal
 
 
+def open_txt_with_line_control(file_txt, strip_spaces: bool = True):
+    # Удаление пустых строк и пробелов
+    with open(file_txt) as f1:
+        lines = f1.readlines()
+        non_empty_lines = list(line for line in lines if not line.isspace())
+
+        if strip_spaces:
+            non_empty_lines = list(line.strip() for line in non_empty_lines)
+
+        return non_empty_lines
+
 def join_path(path: str | tuple | list) -> str:
     if isinstance(path, str):
         return path

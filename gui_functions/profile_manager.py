@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 
@@ -7,7 +8,9 @@ from better_proxy import Proxy
 from loguru import logger
 from typing import Dict, Any
 
-from browser_functions.functions import close_profile, launch_profile_async
+from playwright.async_api import async_playwright
+
+from browser_functions.functions import close_profile, launch_profile_async, launch_synced_profiles
 from db import config
 from db.db_api import load_profiles, get_profile
 from db.models import db, Profile
@@ -16,6 +19,8 @@ from gui_functions.submenu_1 import SubMenu1
 
 from gui_functions.submenu_2 import SubMenu2
 from gui_functions.submenu_modules import SubMenuModules
+from gui_functions.submenu_social import SubMenuSocial
+from gui_functions.utils import is_dark_mode_win, is_dark_mode_mac, apply_dark_theme, create_custom_title_bar
 
 
 class ProfileManager:
@@ -31,17 +36,7 @@ class ProfileManager:
         self.root = tk.Tk()
         self.root.title("Vortex Antidetect Browser")
 
-        # Кроссплатформенная установка иконки
-        try:
-            if os.name == 'nt':  # Windows
-                icon_path = os.path.join(config.ASSETS_DIR, "logo.ico")
-                self.root.iconbitmap(icon_path)
-            else:  # Linux/Mac
-                icon_path = os.path.join(config.ASSETS_DIR, "logo.png")
-                img = tk.PhotoImage(file=icon_path)
-                self.root.tk.call('wm', 'iconphoto', self.root._w, img)
-        except Exception as e:
-            logger.error(f"Failed to load icon: {e}")
+        # create_custom_title_bar(self.root)
 
         # Настройка размеров окна
         window_width = 800
@@ -152,6 +147,56 @@ class ProfileManager:
         )
         modules_button.pack(side=tk.LEFT, padx=5)
 
+        social_button = tk.Button(
+            button_frame,
+            text="Social",
+            command=self.open_submenu_social,
+            **button_style
+        )
+        social_button.pack(side=tk.LEFT, padx=5)
+
+        # Добавляем кнопку синхронизации
+        # sync_button = tk.Button(
+        #     button_frame,
+        #     text="Sync Profiles",
+        #     command=self.on_sync_profiles,
+        #     **button_style
+        # )
+        # sync_button.pack(side=tk.LEFT, padx=5)
+
+        # Кроссплатформенная установка иконки
+        try:
+            os_type = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
+                'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'
+            if os_type == 'win':
+                if is_dark_mode_win():
+                    # icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-white.ico")
+                    # Применяем темную тему
+                    apply_dark_theme(self.root)
+                else:
+                    # icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-black.ico")
+                    pass
+
+                icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-black.ico")
+                self.root.iconbitmap(icon_path)
+
+            else:
+                if os_type == 'mac':
+                    if is_dark_mode_mac():
+                        icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-white.png")
+                        apply_dark_theme(self.root)
+                    else:
+                        icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-black.png")
+                else:
+                    icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-black.png")
+
+                img = tk.PhotoImage(file=icon_path)
+                self.root.tk.call('wm', 'iconphoto', self.root._w, img)
+
+        except Exception as e:
+            logger.error(f"Failed to load icon or set dark theme: {e}")
+
+
     def on_window_configure(self, event=None):
         """Обработчик изменения размера окна"""
         if event and event.widget == self.root:
@@ -179,6 +224,11 @@ class ProfileManager:
         submenu.transient(self.root)
         submenu.grab_set()
 
+    def open_submenu_social(self):
+        submenu = SubMenuSocial(self.root, self.loop)
+        submenu.transient(self.root)
+        submenu.grab_set()
+
     def on_double_click(self, event):
         """Обработчик двойного клика по профилю"""
         selection = self.profile_list.curselection()
@@ -198,7 +248,8 @@ class ProfileManager:
     async def launch_and_update(self, profile):
         """Запускает профиль и обновляет список"""
         try:
-            await launch_profile_async(profile, self.extensions)
+            async with async_playwright() as playwright_instance:
+                await launch_profile_async(playwright_instance, profile, self.extensions)
             logger.debug(f"Profile {profile.name} closed")
             # Обновляем список профилей
             self.update_profile_list()
@@ -256,7 +307,8 @@ class ProfileManager:
                 break
         self.running = False
 
-    def format_profile_display(self, profile: Profile):
+    @staticmethod
+    def format_profile_display(profile: Profile):
         """Форматирует строку для отображения профиля"""
         name = f"{profile.name:<20}"  # Имя профиля, минимум 20 символов
 
@@ -330,3 +382,20 @@ class ProfileManager:
             self.context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.context_menu.grab_release()
+
+    # def on_sync_profiles(self):
+    #     """Запускает синхронизированные профили"""
+    #     from gui_functions.sync_dialog import SyncProfilesDialog
+    #
+    #     dialog = SyncProfilesDialog(self.root)
+    #     self.root.wait_window(dialog)
+    #
+    #     if dialog.result:
+    #         main_name, follower_names = dialog.result
+    #         main_profile = get_profile(main_name)
+    #         follower_profiles = [get_profile(name) for name in follower_names]
+    #
+    #         asyncio.run_coroutine_threadsafe(
+    #             launch_synced_profiles(main_profile, follower_profiles, self.extensions),
+    #             self.loop
+    #         )

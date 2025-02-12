@@ -11,6 +11,8 @@ from db import config
 from db.db_api import load_profiles, flush_wallets, get_all_extensions_from_db
 from file_functions.Import import import_profiles, import_wallets
 from file_functions.utils import get_file_names
+from gui_functions.utils import apply_dark_theme, is_dark_mode_win
+
 
 class SubMenu1(tk.Toplevel):
     def __init__(self, parent, loop):
@@ -40,8 +42,6 @@ class SubMenu1(tk.Toplevel):
             ("Flush all seed phrases and private keys from database", self.on_flush_wallets),
             ("Fetch all extension ids to database", self.on_fetch_extension_ids),
             ("Clear selected extensions cache", self.on_clear_cache_for_extension),
-            ("Import X tokens from 'Profiles' sheet", self.on_import_x_cookies),
-            ("Import Discord tokens from 'Profiles' sheet", self.on_import_discord_cookies),
         ]
 
         for text, command in buttons:
@@ -71,20 +71,6 @@ class SubMenu1(tk.Toplevel):
 
         script_path = os.path.join(config.ROOT_DIR, "file_functions", "import_cookies.py")
         subprocess.Popen([sys.executable, script_path])
-
-    @staticmethod
-    def on_import_x_cookies():
-        # Запускаем установку в отдельном процессе
-
-        script_path = os.path.join(config.ROOT_DIR, "file_functions", "import_x_discord_token.py")
-        subprocess.Popen([sys.executable, script_path, 'X'])
-
-    @staticmethod
-    def on_import_discord_cookies():
-        # Запускаем установку в отдельном процессе
-
-        script_path = os.path.join(config.ROOT_DIR, "file_functions", "import_x_discord_token.py")
-        subprocess.Popen([sys.executable, script_path, 'Discord'])
 
     def on_profile_settings(self):
         logger.debug("Открыты настройки профилей")

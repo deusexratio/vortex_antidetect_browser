@@ -1,7 +1,5 @@
 import asyncio
 import sys
-import json
-import time
 from asyncio import Semaphore
 
 from loguru import logger
@@ -83,7 +81,8 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                 try:
                     await confirm_button.click(timeout=3000)
                 except TargetClosedError:
-                    logger.error(f"Wallet for profile {profile.name} was already recovered")
+                    logger.info(f"Wallet for profile {profile.name} was already recovered")
+                    return
 
                 await rabby_page.get_by_text("Get Started").click(timeout=3000)
 
@@ -92,7 +91,7 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                 logger.success(f"Successfully imported Rabby Wallet for profile {profile.name}")
 
     except Exception as e:
-        logger.error(f"Failed to install extension for profile {profile.name}: {e}")
+        logger.error(f"Failed to import extension for profile {profile.name}: {e}")
 
 
 async def rabby():

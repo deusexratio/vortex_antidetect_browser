@@ -9,3 +9,9 @@ v1.0.3
 - Add importing X and Discord cookies from sheet Profiles
 - Add modules submenu and TurboTap module in development
 - Fix patch file absence
+
+v1.0.4
+- Added Backpack Wallet importing
+- Added MetaMask Wallet importing
+- Small GUI and software architecture rework
+- Added mutual following on X function

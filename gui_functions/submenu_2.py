@@ -84,7 +84,7 @@ class SubMenu2(tk.Toplevel):
 
         # Настройка размеров окна
         window_width = 400
-        window_height = 200
+        window_height = 400
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_offset = (screen_width - window_width) // 2
@@ -108,8 +108,10 @@ class SubMenu2(tk.Toplevel):
             ("Import private keys in Rabby Wallet", self.on_import_pk_rabby),
             ("Import seed phrases in Phantom Wallet", self.on_import_seed_phantom),
             ("Import private keys in Phantom Wallet", self.on_import_pk_phantom),
-            # ("Import seed phrases in Backpack Wallet", self.on_export_cookies),
-            # ("Import private keys in Backpack Wallet", self.on_export_cookies),
+            ("Import seed phrases in Backpack Wallet", self.on_import_seed_backpack),
+            ("Import private keys in Backpack Wallet", self.on_import_pk_backpack),
+            ("Import seed phrases in Metamask Wallet", self.on_import_seed_metamask),
+            ("Import private keys in Metamask Wallet", self.on_import_pk_metamask),
         ]
 
         for text, command in buttons:
@@ -159,6 +161,44 @@ class SubMenu2(tk.Toplevel):
                 str(threads)
             ])
 
+    def on_import_seed_metamask(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "metamask.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'seed',  # тип импорта
+                password,
+                str(threads)
+            ])
+
+    def on_import_pk_metamask(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "metamask.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'pk',  # тип импорта
+                password,
+                str(threads)
+            ])
+
     def on_import_seed_phantom(self):
         # Показываем диалог для ввода параметров
         dialog = PasswordThreadsDialog(self)
@@ -189,6 +229,44 @@ class SubMenu2(tk.Toplevel):
 
             # Запускаем скрипт с параметрами
             script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "phantom.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'pk',  # тип импорта
+                password,
+                str(threads)
+            ])
+
+    def on_import_seed_backpack(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "backpack.py")
+            subprocess.Popen([
+                sys.executable,
+                script_path,
+                'seed',  # тип импорта
+                password,
+                str(threads)
+            ])
+
+    def on_import_pk_backpack(self):
+        # Показываем диалог для ввода параметров
+        dialog = PasswordThreadsDialog(self)
+        self.wait_window(dialog)
+
+        # Если пользователь нажал OK и ввел данные
+        if dialog.result:
+            password, threads = dialog.result
+
+            # Запускаем скрипт с параметрами
+            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "backpack.py")
             subprocess.Popen([
                 sys.executable,
                 script_path,

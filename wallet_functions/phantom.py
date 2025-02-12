@@ -3,8 +3,7 @@ import sys
 from asyncio import Semaphore
 
 from loguru import logger
-from playwright._impl._errors import TargetClosedError
-from playwright.async_api import async_playwright, expect
+from playwright.async_api import async_playwright
 
 from db import config
 from db.db_api import load_profiles, get_extension_id, get_wallets_by_name
@@ -31,9 +30,8 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
         async with semaphore:
             wallets_for_profile = get_wallets_by_name(profile.name)
             seed: str = wallets_for_profile.solana_seed_phrase
-            pk: str = wallets_for_profile.solana_seed_phrase
-            # print('seed', seed)
-            # print('pk', pk)
+            pk: str = wallets_for_profile.solana_private_key
+
             if not seed and seed_or_pk == 'seed':
                 logger.info(f'Not specified Solana seed phrase for profile {profile.name}')
                 return
@@ -46,7 +44,7 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     user_data_dir=profile.user_data_dir,
                     headless=False,
                     # channel='chrome',
-                    args=args
+                    args=args,
                 )
                 phantom_page = await context.new_page()
                 await phantom_page.bring_to_front()
@@ -85,6 +83,7 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     # Import button
                     await phantom_page.locator('//button').nth(1).click(timeout=10000)
 
+                await asyncio.sleep(.5)
                 # passwords
                 await phantom_page.locator('//input').nth(0).fill(password)
                 await phantom_page.locator('//input').nth(1).fill(password)

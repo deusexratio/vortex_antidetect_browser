@@ -64,6 +64,7 @@ def create_files():
     touch(path=config.USER_DATA_DIR)
     touch(path=config.EXTENSIONS_DIR)
     touch(path=config.COOKIES_DIR)
+    touch(path=config.X_USERNAMES_TXT, file=True)
     # touch(path=config.ADS_PROFILES_TABLE, file=True)
     # touch(path=config.IMPORT_TABLE, file=True)
 

@@ -40,7 +40,7 @@ class Profile(Base):
     note: Mapped[str | None]
 
     def __repr__(self):
-        return f'{self.id}: Name: {self.name}, Proxy: {self.proxy}, Fingerprint: {self.fingerprint}'
+        return f'ID: {self.id}: Name: {self.name}, Proxy: {self.proxy}'
 
 
 class Wallets(Base):

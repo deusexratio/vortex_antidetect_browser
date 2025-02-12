@@ -15,6 +15,11 @@ async def import_cookies(x_or_discord: str):
     async with async_playwright() as playwright:
         for profile_xlsx in get_profiles_from_excel(config.IMPORT_TABLE):
             try:
+                if ((x_or_discord == 'X' and not profile_xlsx.x_cookie)
+                        or (x_or_discord == 'Discord' and not profile_xlsx.discord_cookie)):
+                    logger.info(f"Empty {x_or_discord} token for profile {profile_xlsx.name}")
+                    continue
+
                 profile = get_profile(profile_xlsx.name)
 
                 logger.debug(f"Starting to import {x_or_discord} cookies for profile {profile.name}")
@@ -29,27 +34,23 @@ async def import_cookies(x_or_discord: str):
 
                 else: # Discord only now
                     cookies = profile_xlsx.discord_cookie
-                    if cookies:
-                        token = cookies[0]['value']
-                        # Открываем Discord
-                        page = context.new_page()
-                        await page.goto("https://discord.com/app")
+                    token = cookies[0]['value']
+                    # Открываем Discord
+                    page = await context.new_page()
+                    await page.goto("https://discord.com/app")
 
-                        # Устанавливаем токен в localStorage
-                        await page.evaluate(f"""
-                            () => {{
-                                window.localStorage.setItem('token', '"{token}"');
-                            }}
-                        """)
+                    # Устанавливаем токен в localStorage
+                    await page.evaluate(f"""
+                        () => {{
+                            window.localStorage.setItem('token', '"{token}"');
+                        }}
+                    """)
 
-                        # Перезагружаем страницу, чтобы Discord подхватил токен
-                        await page.reload()
+                    # Перезагружаем страницу, чтобы Discord подхватил токен
+                    await page.reload()
 
-                if cookies:
-                    await context.add_cookies(cookies)
-                    logger.success(f"Imported {x_or_discord} cookies for profile {profile.name}")
-                else:
-                    logger.info(f"Empty {x_or_discord} cookies json for profile {profile.name}")
+                await context.add_cookies(cookies)
+                logger.success(f"Imported {x_or_discord} cookies for profile {profile.name}")
 
                 await context.close()
 

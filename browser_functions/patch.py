@@ -2,6 +2,10 @@ import re
 import site
 import sys
 from pathlib import Path
+from random import randrange
+import json
+
+from browserforge.injectors.utils import utils_js
 from loguru import logger
 
 CONTEXT_RE_PATTERN = re.compile(
@@ -140,3 +144,83 @@ class StealthPlaywrightPatcher:
         self._patch_runtime_methods()
         self._patch_context()
         logger.info("[PATCH] All necessary changes have been applied.")
+
+
+def InjectFunction(fingerprint: dict) -> str:
+    return f"""
+    (()=>{{
+        {utils_js()}
+
+        const fp = {json.dumps(fingerprint)};
+        const {{
+            battery,
+            navigator: {{
+                userAgentData,
+                webdriver,
+                ...navigatorProps
+            }},
+            screen: allScreenProps,
+            videoCard,
+            audioCodecs,
+            videoCodecs,
+            mockWebRTC,
+        }} = fp;
+
+        slim = fp.slim;
+
+        const historyLength = {randrange(1, 6)};
+
+        const {{
+            outerHeight,
+            outerWidth,
+            devicePixelRatio,
+            innerWidth,
+            innerHeight,
+            screenX,
+            pageXOffset,
+            pageYOffset,
+            clientWidth,
+            clientHeight,
+            hasHDR,
+            ...newScreen
+        }} = allScreenProps;
+
+        const windowScreenProps = {{
+            innerHeight,
+            outerHeight,
+            outerWidth,
+            innerWidth,
+            screenX,
+            pageXOffset,
+            pageYOffset,
+            devicePixelRatio,
+        }};
+
+        const documentScreenProps = {{
+            clientHeight,
+            clientWidth,
+        }};
+
+        runHeadlessFixes();
+        if (mockWebRTC) blockWebRTC();
+        if (slim) {{
+            window['slim'] = true;
+        }}
+        overrideIntlAPI(navigatorProps.language);
+        overrideStatic();
+        if (userAgentData) {{
+            overrideUserAgentData(userAgentData);
+        }}
+        if (window.navigator.webdriver) {{
+            navigatorProps.webdriver = false;
+        }}
+        overrideInstancePrototype(window.navigator, navigatorProps);
+        overrideInstancePrototype(window.screen, newScreen);
+        overrideWindowDimensionsProps(windowScreenProps);
+        overrideDocumentDimensionsProps(documentScreenProps);
+        overrideInstancePrototype(window.history, {{ length: historyLength }});
+        overrideWebGl(videoCard);
+        overrideCodecs(audioCodecs, videoCodecs);
+        overrideBattery(battery);
+    }})()
+    """

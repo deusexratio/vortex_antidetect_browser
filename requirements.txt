@@ -7,8 +7,10 @@ browserforge~=1.2.1
 requests~=2.32.3
 better-proxy
 pillow
-pynput
+# pynput
 
 # Windows-специфичные зависимости (устанавливаются отдельно в install.py)
 # pywin32>=223
 # winshell
+# keyboard
+# mouse
