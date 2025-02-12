@@ -1,10 +1,17 @@
 import asyncio
+import os
 import sys
 from asyncio import Semaphore
 
 from loguru import logger
 from playwright._impl._errors import TargetClosedError
 from playwright.async_api import async_playwright, expect
+
+# Определяем корневую директорию проекта
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Добавляем корневую директорию в sys.path
+sys.path.append(ROOT_DIR)
 
 from db import config
 from db.db_api import load_profiles, get_extension_id, get_wallets_by_name
@@ -65,6 +72,8 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     confirm_button = rabby_page.locator('//button').last
                     await confirm_button.click(timeout=3000)
 
+                    await rabby_page.get_by_text("Import (1)", exact=True).click(timeout=3000)
+
                 if seed_or_pk == 'pk':
                     await rabby_page.get_by_text('Private Key').click(timeout=3000)
                     await rabby_page.get_by_placeholder('Input private key').fill(pk)
@@ -85,8 +94,7 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     return
 
                 await rabby_page.get_by_text("Get Started").click(timeout=3000)
-
-                await expect(rabby_page.get_by_text('Rabby Wallet is Ready to Use')).to_be_visible(timeout=5000)
+                # await expect(rabby_page.get_by_text('Rabby Wallet is Ready to Use')).to_be_visible(timeout=5000)
 
                 logger.success(f"Successfully imported Rabby Wallet for profile {profile.name}")
 

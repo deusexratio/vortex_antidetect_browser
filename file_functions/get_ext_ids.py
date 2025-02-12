@@ -1,9 +1,16 @@
 import asyncio
+import os
 import sys
 from typing import Any
 
 from playwright.async_api import async_playwright, Playwright, BrowserContext
 from loguru import logger
+
+# Определяем корневую директорию проекта
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Добавляем корневую директорию в sys.path
+sys.path.append(ROOT_DIR)
 
 from db import config
 from db.db_api import load_profiles

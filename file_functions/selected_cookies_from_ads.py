@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 import time
 
@@ -6,6 +7,12 @@ import requests
 from openpyxl.reader.excel import load_workbook
 from playwright.async_api import async_playwright, Cookie
 from loguru import logger
+
+# Определяем корневую директорию проекта
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Добавляем корневую директорию в sys.path
+sys.path.append(ROOT_DIR)
 
 from db import config
 from file_functions.utils import write_json

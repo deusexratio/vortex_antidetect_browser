@@ -1,9 +1,16 @@
 import asyncio
+import os
 import sys
 from asyncio import Semaphore
 
 from loguru import logger
 from playwright.async_api import async_playwright, expect
+
+# Определяем корневую директорию проекта
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Добавляем корневую директорию в sys.path
+sys.path.append(ROOT_DIR)
 
 from db import config
 from db.db_api import load_profiles, get_extension_id, get_wallets_by_name

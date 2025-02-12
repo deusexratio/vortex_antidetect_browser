@@ -1,6 +1,12 @@
+import os
 import sys
+import  asyncio
 
-from pyee import asyncio
+# Определяем корневую директорию проекта
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Добавляем корневую директорию в sys.path
+sys.path.append(ROOT_DIR)
 
 from browser_functions.functions import launch_profile_async
 from db.db_api import get_profile

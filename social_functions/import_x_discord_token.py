@@ -1,3 +1,4 @@
+import os
 import sys
 import traceback
 import asyncio
@@ -5,6 +6,12 @@ import asyncio
 from better_proxy import Proxy
 from playwright.async_api import async_playwright
 from loguru import logger
+
+# Определяем корневую директорию проекта
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Добавляем корневую директорию в sys.path
+sys.path.append(ROOT_DIR)
 
 from db.db_api import get_profile
 from file_functions.Import import get_profiles_from_excel
