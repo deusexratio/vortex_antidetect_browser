@@ -10,7 +10,7 @@ from typing import Dict, Any
 
 from playwright.async_api import async_playwright
 
-from browser_functions.functions import close_profile, launch_profile_async, launch_synced_profiles
+from browser_functions.functions import close_profile, launch_profile_async # launch_synced_profiles
 from db import config
 from db.db_api import load_profiles, get_profile
 from db.models import db, Profile
