@@ -5,18 +5,15 @@ from playwright.async_api import Playwright
 from loguru import logger
 
 from browser_functions.args_utils import get_context_launch_args
-from browser_functions.patch import StealthPlaywrightPatcher, InjectFunction
 from db.models import Profile, db
 from browser_functions.cookie_utils import sanitize_cookie_value, convert_cookies_to_playwright_format
-
-
-StealthPlaywrightPatcher().apply_patches()
 
 
 async def launch_profile_async(playwright_instance: Playwright,
                                profile: Profile,
                                extensions: list[str] | None,
-                               keep_open: bool = True):
+                               keep_open: bool = True,
+                               restore_pages: bool = True):
     logger.debug(f"Starting profile {profile.name}...")
     try:
             args = get_context_launch_args(profile, extensions)
@@ -39,20 +36,22 @@ async def launch_profile_async(playwright_instance: Playwright,
                 #                                 };
                 #                             """)
                 # await context.add_init_script(InjectFunction(fingerprint))
-
-                logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
-                # Открываем страницы и держим браузер открытым
-                for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
+                if restore_pages:
+                    logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
+                    # Открываем страницы и держим браузер открытым
+                    for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
+                        page = await context.new_page()
+                        try:
+                            await page.goto(page_url)
+                        except Exception as e:
+                            # logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
+                            # await asyncio.sleep(60)
+                            if 'ERR_TIMED_OUT' in str(e):
+                                logger.error(f"Profile {profile.name} proxy doesn't work")
+                                break
+                            # await page.goto('http://eth0.me/')
+                else:
                     page = await context.new_page()
-                    try:
-                        await page.goto(page_url)
-                    except Exception as e:
-                        # logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
-                        # await asyncio.sleep(60)
-                        if 'ERR_TIMED_OUT' in str(e):
-                            logger.error(f"Profile {profile.name} proxy doesn't work")
-                            break
-                        # await page.goto('http://eth0.me/')
 
                 # Закрываем стартовую about:blank
                 for page in context.pages:

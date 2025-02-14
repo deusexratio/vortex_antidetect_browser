@@ -15,3 +15,9 @@ v1.0.4
 - Added MetaMask Wallet importing
 - Small GUI and software architecture rework
 - Added mutual following on X function
+
+v1.0.5
+- Added AbstractPizza module
+- Fix refreshing extensions ids
+- Rabby import updated to version 0.93.13
+- MetaMask import updated to version 12.11.0

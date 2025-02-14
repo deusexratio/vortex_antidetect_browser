@@ -84,19 +84,6 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     for i, seed in enumerate(seeds):
                         await metamask_page.locator("//input").nth(i * 2).fill(seed, timeout=5000)
 
-                    # await metamask_page.locator("//input").nth(0).fill(seeds[0], timeout=5000)
-                    # await metamask_page.locator("//input").nth(2).fill(seeds[1], timeout=5000)
-                    # await metamask_page.locator("//input").nth(4).fill(seeds[2], timeout=5000)
-                    # await metamask_page.locator("//input").nth(6).fill(seeds[3], timeout=5000)
-                    # await metamask_page.locator("//input").nth(8).fill(seeds[4], timeout=5000)
-                    # await metamask_page.locator("//input").nth(10).fill(seeds[5], timeout=5000)
-                    # await metamask_page.locator("//input").nth(12).fill(seeds[6], timeout=5000)
-                    # await metamask_page.locator("//input").nth(14).fill(seeds[7], timeout=5000)
-                    # await metamask_page.locator("//input").nth(16).fill(seeds[8], timeout=5000)
-                    # await metamask_page.locator("//input").nth(18).fill(seeds[9], timeout=5000)
-                    # await metamask_page.locator("//input").nth(20).fill(seeds[10], timeout=5000)
-                    # await metamask_page.locator("//input").nth(22).fill(seeds[11], timeout=5000)
-
                     # Import
                     await metamask_page.locator("//button").last.click(timeout=5000)
 
@@ -139,7 +126,7 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     await metamask_page.get_by_test_id("pin-extension-next").click(timeout=5000)
                     await metamask_page.get_by_test_id("pin-extension-done").click(timeout=5000)
 
-                    await metamask_page.locator("//button").last.click(timeout=5000)
+                    # await metamask_page.locator("//button").last.click(timeout=5000)
 
                     # await metamask_page.goto(f'chrome-extension://{metamask_extension_id}/home.html#')
                     #
@@ -147,18 +134,18 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     # await metamask_page.locator("//button").last.click(timeout=5000)
 
                     # Account
-                    await metamask_page.locator("//button").nth(2).click(timeout=5000)
+                    await metamask_page.get_by_test_id('account-menu-icon').click(timeout=5000)
 
                     # Add Account
-                    await metamask_page.locator("//button").last.click(timeout=5000)
+                    await metamask_page.get_by_test_id('multichain-account-menu-popover-action-button').click(timeout=5000)
 
                     # Import account
-                    await metamask_page.locator("//button").nth(27).click(timeout=5000)
+                    await metamask_page.get_by_test_id('multichain-account-menu-popover-add-imported-account').click(timeout=5000)
 
                     await metamask_page.locator("//input").first.fill(pk, timeout=5000)
 
                     # Import
-                    await metamask_page.locator("//button").last.click(timeout=5000)
+                    await metamask_page.get_by_test_id('import-account-confirm-button').click(timeout=5000)
 
                     # await expect(metamask_page.get_by_text('Account 2')).to_be_visible(timeout=5000)
 

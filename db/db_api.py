@@ -39,5 +39,13 @@ def get_extension_id(extension_name: str):
         if extension_name.lower() in extension.name.lower():
             return extension.extension_id
 
+def get_extension_instance(extension_name: str | None = None, extension_id: str | None = None):
+    if extension_name:
+        return db.one(Extension, Extension.name == extension_name)
+    elif extension_id:
+        return db.one(Extension, Extension.extension_id == extension_id)
+    else:
+        print('Specify arguments in get_extension_instance')
+
 def get_all_extensions_from_db():
     return db.all(entities=Extension)

@@ -33,8 +33,8 @@ if extension_paths:
 logger.debug(f'args: {args}')
 
 async def install_extension_for_profile(profile: Profile, password: str, semaphore: Semaphore, seed_or_pk: str):
-    try:
-        async with semaphore:
+    async with semaphore:
+        try:
             wallets_for_profile = get_wallets_by_name(profile.name)
             seed = wallets_for_profile.evm_seed_phrase
             pk = wallets_for_profile.evm_private_key
@@ -72,8 +72,6 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     confirm_button = rabby_page.locator('//button').last
                     await confirm_button.click(timeout=3000)
 
-                    await rabby_page.get_by_text("Import (1)", exact=True).click(timeout=3000)
-
                 if seed_or_pk == 'pk':
                     await rabby_page.get_by_text('Private Key').click(timeout=3000)
                     await rabby_page.get_by_placeholder('Input private key').fill(pk)
@@ -93,13 +91,17 @@ async def install_extension_for_profile(profile: Profile, password: str, semapho
                     logger.info(f"Wallet for profile {profile.name} was already recovered")
                     return
 
+                if seed_or_pk == 'seed':
+                    await rabby_page.get_by_text("Import (1)", exact=True).click(timeout=3000)
+
                 await rabby_page.get_by_text("Get Started").click(timeout=3000)
                 # await expect(rabby_page.get_by_text('Rabby Wallet is Ready to Use')).to_be_visible(timeout=5000)
 
                 logger.success(f"Successfully imported Rabby Wallet for profile {profile.name}")
 
-    except Exception as e:
-        logger.error(f"Failed to import extension for profile {profile.name}: {e}")
+        except Exception as e:
+            logger.error(f"Failed to import extension for profile {profile.name}: {e}")
+            await asyncio.sleep(1000)
 
 
 async def rabby():

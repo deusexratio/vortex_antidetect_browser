@@ -26,7 +26,11 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
         if row[0]:
             name = str(row[0])
             if row[1]:
-                proxy = Proxy.from_str(row[1])
+                try:
+                    proxy = Proxy.from_str(row[1])
+                except ValueError as e:
+                    print(row)
+                    logger.warning(e)
             else:
                 proxy = ''
             if row[2]:

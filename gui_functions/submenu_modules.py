@@ -5,6 +5,8 @@ import subprocess
 from tkinter import messagebox
 
 from db import config
+from db.db_api import load_profiles
+from gui_functions.common_dialogs import PasswordThreadsDialog
 
 
 class SubMenuModules(tk.Toplevel):
@@ -29,6 +31,7 @@ class SubMenuModules(tk.Toplevel):
         # Добавляем кнопки
         buttons = [
             ("Turbo Tap", self.on_turbo_tap),
+            ("Abstract Pizza", self.on_abstract_pizza),
         ]
 
         for text, command in buttons:
@@ -46,94 +49,94 @@ class SubMenuModules(tk.Toplevel):
             font=("Arial", 12)
         ).pack(expand=True)
 
-    def on_turbo_tap(self):
-        """Запускает turbo_tap.py с выбранными профилями"""
-        dialog = ProfileListDialog(self)
+    def on_abstract_pizza(self):
+        """Запускает abstract_pizza.py с выбранными профилями"""
+        dialog = ModuleProfilesDialog(self)
         self.wait_window(dialog)
 
         if dialog.result:
-            # Запускаем скрипт с списком профилей
-            script_path = os.path.join(config.ROOT_DIR, "wallet_functions", "turbo_tap.py")
-            profile_list = ",".join(dialog.result)  # Объединяем имена через запятую
+            profile_names, password, threads = dialog.result
+            profiles_names = ",".join(profile_names)
+            # Запускаем скрипт со списком профилей
+            script_path = os.path.join(config.ROOT_DIR, "modules", "abstract_pizza.py")
 
-            subprocess.Popen([
-                sys.executable,
-                script_path,
-                profile_list
-            ])
+            subprocess.Popen([sys.executable, script_path, profiles_names, password, str(threads), 'Abstract'])
+
+    def on_turbo_tap(self):
+        """Запускает turbo_tap.py с выбранными профилями"""
+        dialog = ModuleProfilesDialog(self)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            profile_names, password, threads = dialog.result
+            profiles_names = ",".join(profile_names)
+            # Запускаем скрипт со списком профилей
+            script_path = os.path.join(config.ROOT_DIR, "modules", "turbo_tap.py")
+
+            subprocess.Popen([sys.executable, script_path, profiles_names, password, str(threads)])
 
 
-class ProfileListDialog(tk.Toplevel):
+class ModuleProfilesDialog(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.result = None
+        self.parent = parent
 
-        self.title("Enter Profile Names")
+        self.title("Select Profiles for Module:")
 
         # Настройка размеров окна
         window_width = 400
-        window_height = 200
+        window_height = 550
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_offset = (screen_width - window_width) // 2
         y_offset = (screen_height - window_height) // 2
         self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
 
-        # Создаем и размещаем элементы
+        # Настройка окна
         frame = tk.Frame(self, padx=20, pady=20)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        # Метка с инструкцией
-        tk.Label(
-            frame,
-            text="Enter profile names separated by commas:",
-            font=("Arial", 10)
-        ).pack(pady=(0, 10))
+        # Список профилей
 
-        # Текстовое поле для ввода
-        self.text_entry = tk.Text(frame, height=5)
-        self.text_entry.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
+        tk.Label(frame, text="Select profiles:").pack()
+        self.profiles_list = tk.Listbox(frame, height=25, selectmode=tk.MULTIPLE, exportselection=0)
+        self.profiles_list.pack(fill=tk.X, pady=5)
+
+        # Загружаем профили
+        for profile in load_profiles():
+            self.profiles_list.insert(tk.END, profile.name)
 
         # Кнопки
-        button_frame = tk.Frame(frame)
-        button_frame.pack(pady=(0, 10))
-
-        tk.Button(
-            button_frame,
-            text="OK",
-            command=self.on_ok,
-            width=10
-        ).pack(side=tk.LEFT, padx=5)
-
-        tk.Button(
-            button_frame,
-            text="Cancel",
-            command=self.on_cancel,
-            width=10
-        ).pack(side=tk.LEFT, padx=5)
+        tk.Button(frame, text="Cancel", command=self.destroy).pack(side=tk.BOTTOM, padx=5)
+        tk.Button(frame, text="Start Module", command=self.on_start).pack(side=tk.BOTTOM, padx=5)
 
         # Делаем диалог модальным
         self.transient(parent)
         self.grab_set()
 
-        # Фокус на поле ввода
-        self.text_entry.focus_set()
 
-    def on_ok(self):
-        """Обработчик нажатия OK"""
-        text = self.text_entry.get("1.0", tk.END).strip()
-        if text:
-            # Разбиваем текст на имена профилей и очищаем их
-            profile_names = [name.strip() for name in text.split(",") if name.strip()]
-            if profile_names:
-                self.result = profile_names
-                self.destroy()
-            else:
-                messagebox.showerror("Error", "Please enter at least one profile name")
-        else:
-            messagebox.showerror("Error", "Please enter profile names")
+    def on_start(self):
+        # main_sel = self.main_profile_list.curselection()
+        profiles_selection = self.profiles_list.curselection()
 
-    def on_cancel(self):
-        """Обработчик нажатия Cancel"""
-        self.destroy()
+        # if not main_sel:
+        #     messagebox.showerror("Error", "Please select main profile")
+        #     return
 
+        if not profiles_selection:
+            messagebox.showerror("Error", "Please select profiles")
+            return
+
+        # main_name = self.main_profile_list.get(main_sel[0])
+        profile_names = [self.profiles_list.get(i) for i in profiles_selection]
+
+        password_threads_dialog = PasswordThreadsDialog(self)
+        self.wait_window(password_threads_dialog)
+
+        # Если пользователь нажал OK и ввел данные
+        if password_threads_dialog.result:
+            password, threads = password_threads_dialog.result
+
+            self.result = profile_names, password, threads
+            self.destroy()

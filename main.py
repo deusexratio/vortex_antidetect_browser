@@ -1,9 +1,12 @@
 import asyncio
 import threading
 
+from browser_functions.patch import StealthPlaywrightPatcher
 from file_functions.create_files import create_files
 from gui_functions.profile_manager import ProfileManager
 
+# Патчим Playwright
+StealthPlaywrightPatcher().apply_patches()
 
 def main():
     # Создаем и настраиваем event loop

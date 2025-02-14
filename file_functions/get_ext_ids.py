@@ -13,7 +13,7 @@ ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(ROOT_DIR)
 
 from db import config
-from db.db_api import load_profiles
+from db.db_api import load_profiles, get_extension_instance
 from db.models import Extension, db
 from file_functions.utils import get_file_names
 
@@ -129,8 +129,15 @@ def main():
     ext_ids = asyncio.run(get_ext_ids(extension_paths))
 
     for name, id_ in ext_ids.items():
-        extension_instance = Extension(name=name, extension_id=id_)
-        db.insert(extension_instance)
+        old_instance = get_extension_instance(name)
+        if old_instance:
+            old_instance.extension_id = id_
+            db.commit()
+            # db.update(entities=Extension, columns=Extension.extension_id,
+            #           now_value=old_instance.extension_id, future_value=extension_instance.extension_id)
+        else:
+            extension_instance = Extension(name=name, extension_id=id_)
+            db.insert(extension_instance)
 
 if __name__ == "__main__":
     main()
