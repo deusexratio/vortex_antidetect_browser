@@ -21,3 +21,6 @@ v1.0.5
 - Fix refreshing extensions ids
 - Rabby import updated to version 0.93.13
 - MetaMask import updated to version 12.11.0
+
+v1.0.6
+- Tune up Abstract Pizza settings + added stopping process

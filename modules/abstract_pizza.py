@@ -24,10 +24,11 @@ class AbstractPizza:
     pizza_url = 'https://abstract.pizza/app'
     rabby_ext_url = f'chrome-extension://{rabby_extension_id}/index.html'
 
-    def __init__(self, context: BrowserContext, profile: Profile, password: str, rabby_or_abstract: str):
+    def __init__(self, context: BrowserContext, profile: Profile, range_from: int, range_to: int, rabby_or_abstract: str):
         self.context = context
         self.profile = profile
-        self.password = password
+        self.range_from = range_from
+        self.range_to = range_to
         self.rabby_or_abstract = rabby_or_abstract
 
     async def cook(self):
@@ -48,13 +49,16 @@ class AbstractPizza:
         points_count_selector = your_points_element.locator('xpath=following-sibling::*[1]')
 
         sleep = random.randint(5, 30)
+        pizzas_amount = random.randint(self.range_from, self.range_to)
+
         logger.info(f"Profile {self.profile.name} sleeping for {sleep} seconds")
+        logger.info(f"Profile {self.profile.name} gonna cook {pizzas_amount} pizzas")
         await asyncio.sleep(sleep)
 
-        while True:
+        for i in range(1, pizzas_amount+1):
             try:
                 points = await points_count_selector.text_content(timeout=5000)
-                logger.info(f"Profile: {self.profile.name} starting to cook, current points: {points.strip()}")
+                logger.info(f"Profile: {self.profile.name} starting to cook {i} pizza, current points: {points.strip()}")
                 await start_button.click(timeout=3000)
                 await asyncio.sleep(3)
                 abs_page = await self.switch_to_url_page('privy', timeout_=15000)
@@ -212,7 +216,7 @@ class AbstractPizza:
 
 
 
-async def abstract_pizza_launcher(semaphore, profile, password, rabby_or_abstract):
+async def abstract_pizza_launcher(semaphore, profile, range_from, range_to, rabby_or_abstract):
     async with semaphore:
         async with async_playwright() as playwright_instance:
             while True:
@@ -221,7 +225,7 @@ async def abstract_pizza_launcher(semaphore, profile, password, rabby_or_abstrac
                                                          extensions=extensions,
                                                          keep_open=False, restore_pages=False)
 
-                    pizza = AbstractPizza(context, profile, password, rabby_or_abstract)
+                    pizza = AbstractPizza(context, profile, range_from, range_to, rabby_or_abstract)
 
                     await pizza.cook()
                     break
@@ -238,17 +242,21 @@ async def main():
         print("Usage: python abstract_pizza.py")
         sys.exit(1)
     profiles_list_str = sys.argv[1]
-    password = sys.argv[2]
+    pizza_range = sys.argv[2]
     threads = sys.argv[3]
     rabby_or_abstract = sys.argv[4]
 
     semaphore = asyncio.Semaphore(int(threads))
 
+    pizza_range = pizza_range.split('-')
+    range_from, range_to = int(pizza_range[0]), int(pizza_range[1])
+
     profiles = []
     for profile_name in profiles_list_str.split(','):
         profiles.append(get_profile(profile_name))
 
-    tasks = [asyncio.create_task(abstract_pizza_launcher(semaphore, profile, password, rabby_or_abstract)) for profile in profiles]
+    tasks = [asyncio.create_task(abstract_pizza_launcher(semaphore, profile, range_from, range_to,
+                                                         rabby_or_abstract)) for profile in profiles]
     logger.debug(f"Launching {len(tasks)} tasks")
     await asyncio.wait(tasks)
 
