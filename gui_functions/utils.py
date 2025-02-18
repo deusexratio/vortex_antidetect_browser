@@ -85,9 +85,7 @@ def create_custom_title_bar(root):
     root.overrideredirect(True)
 
     try:
-        os_type = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
-            'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'
-        if os_type == 'win':
+        if config.OS_TYPE == 'win':
             if is_dark_mode_win():
                 icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-white.ico")
                 # Применяем темную тему
@@ -98,7 +96,7 @@ def create_custom_title_bar(root):
             root.iconbitmap(icon_path)
 
         else:
-            if os_type == 'mac':
+            if config.OS_TYPE == 'mac':
                 if is_dark_mode_mac():
                     icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-white.png")
                     apply_dark_theme(root)
@@ -146,7 +144,7 @@ def create_custom_title_bar(root):
     title_bar.bind("<ButtonRelease-1>", stop_move)
     title_bar.bind("<B1-Motion>", on_motion)
 
-    if os_type == 'win':
+    if config.OS_TYPE == 'win':
         # Добавляем окно в панель задач
         hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
         style = ctypes.windll.user32.GetWindowLongW(hwnd, -20)

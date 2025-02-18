@@ -1,5 +1,6 @@
 import asyncio
 import os
+import subprocess
 import sys
 import tkinter as tk
 from tkinter import messagebox, simpledialog
@@ -18,8 +19,10 @@ from file_functions.utils import get_file_names
 from gui_functions.submenu_1 import SubMenu1
 
 from gui_functions.submenu_2 import SubMenu2
+from gui_functions.submenu_deletion import DeleteProfilesDialog
 from gui_functions.submenu_modules import SubMenuModules
 from gui_functions.submenu_social import SubMenuSocial
+from updater.update_utils import check_for_updates
 from gui_functions.utils import is_dark_mode_win, is_dark_mode_mac, apply_dark_theme, create_custom_title_bar
 
 
@@ -31,6 +34,19 @@ class ProfileManager:
         self.running = True
         self.profile_map = {}  # Добавляем маппинг индексов к именам профилей
         self.setup_gui()
+        release = check_for_updates()
+        if release:
+            if messagebox.askyesno("Update Available", "A new update is available. Do you want to install it?"):
+                script_path = os.path.join(config.ROOT_DIR, "updater", "update_functions.py")
+                if config.OS_TYPE == 'win':
+                    subprocess.Popen(["start", "cmd", "/K", sys.executable, script_path], shell=True)
+                elif config.OS_TYPE =='mac':
+                    subprocess.Popen(["open", "-a", "Terminal", sys.executable, script_path])
+                else:
+                    subprocess.Popen(["gnome-terminal", "--", sys.executable, script_path])  # Для Linux
+                sys.exit(0)
+        else:
+            messagebox.showinfo("Update", "No updates available.")
 
     def setup_gui(self):
         self.root = tk.Tk()
@@ -155,6 +171,14 @@ class ProfileManager:
         )
         social_button.pack(side=tk.LEFT, padx=5)
 
+        delete_button = tk.Button(
+            button_frame,
+            text="Delete Profiles",
+            command=self.open_submenu_deletion,
+            **button_style
+        )
+        delete_button.pack(side=tk.LEFT, padx=5)
+
         # Добавляем кнопку синхронизации
         # sync_button = tk.Button(
         #     button_frame,
@@ -166,9 +190,8 @@ class ProfileManager:
 
         # Кроссплатформенная установка иконки
         try:
-            os_type = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
-                'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'
-            if os_type == 'win':
+            logger.debug(f"OS type: {config.OS_TYPE}")
+            if config.OS_TYPE == 'win':
                 if is_dark_mode_win():
                     # icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-white.ico")
                     # Применяем темную тему
@@ -181,7 +204,7 @@ class ProfileManager:
                 self.root.iconbitmap(icon_path)
 
             else:
-                if os_type == 'mac':
+                if config.OS_TYPE == 'mac':
                     if is_dark_mode_mac():
                         icon_path = os.path.join(config.ASSETS_DIR, "Vortex-logo-white.png")
                         apply_dark_theme(self.root)
@@ -226,6 +249,11 @@ class ProfileManager:
 
     def open_submenu_social(self):
         submenu = SubMenuSocial(self.root, self.loop)
+        submenu.transient(self.root)
+        submenu.grab_set()
+
+    def open_submenu_deletion(self):
+        submenu = DeleteProfilesDialog(self.root, self.loop)
         submenu.transient(self.root)
         submenu.grab_set()
 
@@ -278,10 +306,6 @@ class ProfileManager:
             except:
                 pass
 
-    def on_close(self):
-        selected_profiles = [self.profile_list.get(idx) for idx in self.profile_list.curselection()]
-        for profile in selected_profiles:
-            close_profile(profile, self.active_sessions)
 
     def run(self):
         """Запускает главный цикл приложения"""
@@ -332,7 +356,7 @@ class ProfileManager:
         return f"{name} │ {last_opening_time} │ {proxy} {note}"  # todo: разобраться с пайпом после прокси
 
     # Добавим метод для редактирования примечания
-    def edit_note(self, event=None):
+    def edit_note(self):
         selection = self.profile_list.curselection()
         if selection:
             index = selection[0]
@@ -351,7 +375,7 @@ class ProfileManager:
                     self.profile_list.delete(index)
                     self.profile_list.insert(index, self.format_profile_display(profile))
 
-    def edit_proxy(self, event=None):
+    def edit_proxy(self):
         selection = self.profile_list.curselection()
         if selection:
             index = selection[0]

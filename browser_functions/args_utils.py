@@ -6,6 +6,7 @@ from browserforge.injectors.utils import only_injectable_headers
 from loguru import logger
 
 from db.models import Profile
+from db import config
 from gui_functions.utils import is_dark_mode_win, is_dark_mode_mac
 
 
@@ -41,15 +42,13 @@ def get_context_launch_args(profile: Profile, extensions: list[str] | None) -> d
         ])
         logger.debug(f"Loading extensions: {extension_paths}")
 
-    os_type = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
-        'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'
-    if os_type == 'win':
+    if config.OS_TYPE == 'win':
         if is_dark_mode_win():
             color_scheme = 'dark'
         else:
             color_scheme = 'light'
 
-    elif os_type == 'mac':
+    elif config.OS_TYPE == 'mac':
         if is_dark_mode_mac():
             color_scheme = 'dark'
         else:

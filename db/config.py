@@ -2,7 +2,6 @@ import os
 import sys
 from pathlib import Path
 
-from browser_functions.patch import StealthPlaywrightPatcher
 
 if getattr(sys, 'frozen', False):
     ROOT_DIR = Path(sys.executable).parent.absolute()
@@ -21,8 +20,5 @@ ADS_PROFILES_TABLE = os.path.join(USER_FILES_DIR, 'profiles_ads.xlsx')
 COOKIES_DIR = os.path.join(USER_FILES_DIR, 'cookies')
 X_USERNAMES_TXT = os.path.join(USER_FILES_DIR, 'x_usernames_for_following.txt')
 
-# Устанавливаем переменную окружения
-# os.environ['ROOT_DIR'] = str(ROOT_DIR)
-#
-# # Патчим Playwright
-# StealthPlaywrightPatcher().apply_patches()
+OS_TYPE = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
+    'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'

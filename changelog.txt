@@ -6,7 +6,7 @@ v1.0.2
 
 v1.0.3
 - Fix Rabby private key import
-- Add importing X and Discord cookies from sheet Profiles
+- ❗❗❗ Add importing X and Discord cookies from sheet Profiles
 - Add modules submenu and TurboTap module in development
 - Fix patch file absence
 
@@ -14,13 +14,17 @@ v1.0.4
 - Added Backpack Wallet importing
 - Added MetaMask Wallet importing
 - Small GUI and software architecture rework
-- Added mutual following on X function
+- ❗❗❗ Added mutual following on X function
 
 v1.0.5
-- Added AbstractPizza module
+- ❗❗❗ Added AbstractPizza module
 - Fix refreshing extensions ids
 - Rabby import updated to version 0.93.13
 - MetaMask import updated to version 12.11.0
 
 v1.0.6
 - Tune up Abstract Pizza settings + added stopping process
+
+v1.0.7
+- Added profiles deletion
+- ❗❗❗ Added auto-updating feature

@@ -96,13 +96,13 @@ class SubMenuModules(tk.Toplevel):
         self.wait_window(dialog)
 
         if dialog.result:
-            profile_names, password, threads = dialog.result
+            profile_names, taps_range, password, threads = dialog.result
             profiles_names = ",".join(profile_names)
             # Запускаем скрипт со списком профилей
             script_path = os.path.join(config.ROOT_DIR, "modules", "turbo_tap.py")
             if self.turbo_subprocess is None:
                 self.turbo_subprocess = subprocess.Popen([sys.executable, script_path,
-                                                          profiles_names, password, str(threads)])
+                                                          profiles_names, taps_range, password, str(threads)])
 
     def stop_turbo_tap(self):
         """Останавливает субпроцесс"""
@@ -191,6 +191,23 @@ class ModuleProfilesDialog(tk.Toplevel):
             self.result = profile_names, pizza_range, threads
             self.destroy()
 
+    def on_start_turbo(self):
+        profiles_selection = self.profiles_list.curselection()
+        if not profiles_selection:
+            messagebox.showerror("Error", "Please select profiles")
+            return
+
+        profile_names = [self.profiles_list.get(i) for i in profiles_selection]
+
+        taps_range_dialog = TurboDialog(self)
+        self.wait_window(taps_range_dialog)
+
+        if taps_range_dialog.result:
+            taps_range, password, threads = taps_range_dialog.result
+
+            self.result = profile_names, taps_range, password, threads
+            self.destroy()
+
 
 class PizzaDialog(tk.Toplevel):
     def __init__(self, parent):
@@ -235,7 +252,7 @@ class PizzaDialog(tk.Toplevel):
         button_frame.grid(row=2, column=0, columnspan=2, pady=20)
 
         tk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Cancel", command=self.on_cancel).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.LEFT, padx=5)
 
         # Настройка grid
         frame.columnconfigure(1, weight=1)
@@ -264,6 +281,87 @@ class PizzaDialog(tk.Toplevel):
         except ValueError as e:
             messagebox.showerror("Error", str(e))
 
-    def on_cancel(self):
-        self.destroy()
 
+
+class TurboDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.result = None
+
+        self.title("Enter how many taps you want to do on each profile:")
+
+        # Настройка размеров окна
+        window_width = 400
+        window_height = 300
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x_offset = (screen_width - window_width) // 2
+        y_offset = (screen_height - window_height) // 2
+        self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
+
+        tk.Label(
+            self,
+            text="Enter range to random like '10000-50000'",
+            font=("Arial", 12)
+        ).pack(expand=True)
+
+        # Создаем и размещаем элементы
+        frame = tk.Frame(self, padx=20, pady=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Поле для количества taps
+        tk.Label(frame, text="Taps:").grid(row=0, column=0, sticky='w', pady=5)
+        self.taps_entry = tk.Entry(frame)
+        self.taps_entry.grid(row=0, column=1, sticky='ew', pady=5)
+        self.taps_entry.insert(0, "10000-50000")  # Значение по умолчанию
+
+        # Поле для количества потоков
+        tk.Label(frame, text="Password:").grid(row=1, column=0, sticky='w', pady=5)
+        self.password_entry = tk.Entry(frame)
+        self.password_entry.grid(row=1, column=1, sticky='ew', pady=5)
+        self.password_entry.insert(0, "12345678")  # Значение по умолчанию
+
+        # Поле для количества потоков
+        tk.Label(frame, text="Threads:").grid(row=2, column=0, sticky='w', pady=5)
+        self.threads_entry = tk.Entry(frame)
+        self.threads_entry.grid(row=2, column=1, sticky='ew', pady=5)
+        self.threads_entry.insert(0, "3")  # Значение по умолчанию
+
+        # Кнопки
+        button_frame = tk.Frame(frame)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
+
+        tk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.LEFT, padx=5)
+
+        # Настройка grid
+        frame.columnconfigure(1, weight=1)
+
+        # Делаем диалог модальным
+        self.transient(parent)
+        self.grab_set()
+
+        # Фокус на поле пароля
+        self.taps_entry.focus_set()
+
+        # Привязываем Enter к OK
+        self.bind('<Return>', lambda e: self.on_ok())
+
+    def on_ok(self):
+        try:
+            taps_range = self.taps_entry.get()
+            if len(taps_range.split('-')) != 2:
+                raise ValueError("Incorrect input")
+
+            password = self.password_entry.get()
+            if not password:
+                raise ValueError("Password cannot be empty")
+
+            threads = int(self.threads_entry.get())
+            if threads <= 0:
+                raise ValueError("Threads must be positive")
+
+            self.result = (taps_range, password, threads)
+            self.destroy()
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))

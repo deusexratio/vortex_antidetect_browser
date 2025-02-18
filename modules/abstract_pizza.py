@@ -228,6 +228,7 @@ async def abstract_pizza_launcher(semaphore, profile, range_from, range_to, rabb
                     pizza = AbstractPizza(context, profile, range_from, range_to, rabby_or_abstract)
 
                     await pizza.cook()
+                    logger.success(f"Profile {profile.name} finished all pizzas!")
                     break
 
                 except Exception as e:

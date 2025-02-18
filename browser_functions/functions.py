@@ -1,10 +1,12 @@
 import asyncio
 from datetime import datetime
+import json
 
 from playwright.async_api import Playwright
 from loguru import logger
 
 from browser_functions.args_utils import get_context_launch_args
+from browser_functions.patch import InjectFunction
 from db.models import Profile, db
 from browser_functions.cookie_utils import sanitize_cookie_value, convert_cookies_to_playwright_format
 
@@ -35,6 +37,7 @@ async def launch_profile_async(playwright_instance: Playwright,
                 #                                     runtime: {}
                 #                                 };
                 #                             """)
+                # fingerprint = json.loads(profile.fingerprint)
                 # await context.add_init_script(InjectFunction(fingerprint))
                 if restore_pages:
                     logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
