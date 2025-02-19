@@ -22,3 +22,6 @@ X_USERNAMES_TXT = os.path.join(USER_FILES_DIR, 'x_usernames_for_following.txt')
 
 OS_TYPE = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
     'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'
+
+# no traceback in logs
+sys.tracebacklimit = 0

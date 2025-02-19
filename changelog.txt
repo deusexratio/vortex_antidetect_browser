@@ -28,3 +28,6 @@ v1.0.6
 v1.0.7
 - Added profiles deletion
 - ❗❗❗ Added auto-updating feature
+
+v1.0.8
+- ❗❗❗ Added Fantasy Monad module

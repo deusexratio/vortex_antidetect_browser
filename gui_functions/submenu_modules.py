@@ -19,10 +19,11 @@ class SubMenuModules(tk.Toplevel):
 
         self.pizza_subprocess = None
         self.turbo_subprocess = None
+        self.fantasy_subprocess = None
 
         # Настройка размеров окна
         window_width = 400
-        window_height = 300
+        window_height = 500
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_offset = (screen_width - window_width) // 2
@@ -44,6 +45,7 @@ class SubMenuModules(tk.Toplevel):
         buttons = [
             ("Turbo Tap", self.on_turbo_tap),
             ("Abstract Pizza", self.on_abstract_pizza),
+            ("Fantasy Monad", self.on_fantasy_monad),
         ]
 
         for text, command in buttons:
@@ -60,6 +62,7 @@ class SubMenuModules(tk.Toplevel):
         stop_buttons = [
             ("Stop Turbo Tap", self.stop_turbo_tap),
             ("Stop Abstract Pizza", self.stop_abstract_pizza),
+            ("Stop Fantasy Monad", self.stop_fantasy_monad),
         ]
 
         for text, command in stop_buttons:
@@ -111,6 +114,27 @@ class SubMenuModules(tk.Toplevel):
             self.turbo_subprocess.wait()  # Ждем завершения процесса
             logger.debug("Turbo Tap stopped")
 
+    def on_fantasy_monad(self):
+        """Запускает turbo_tap.py с выбранными профилями"""
+        dialog = ModuleProfilesDialog(self, module='Fantasy')
+        self.wait_window(dialog)
+
+        if dialog.result:
+            profile_names, ref_codes, how_many_accounts, threads = dialog.result
+            profiles_names = ",".join(profile_names)
+            # Запускаем скрипт со списком профилей
+            script_path = os.path.join(config.ROOT_DIR, "modules", "fantasy_monad.py")
+            if self.fantasy_subprocess is None:
+                self.fantasy_subprocess = subprocess.Popen([sys.executable, script_path,
+                                                          profiles_names, ref_codes, how_many_accounts, str(threads)])
+
+    def stop_fantasy_monad(self):
+        """Останавливает субпроцесс"""
+        if self.fantasy_subprocess is not None and self.fantasy_subprocess.poll() is None:
+            self.fantasy_subprocess.terminate()  # Или self.process.kill() для принудительной остановки
+            self.fantasy_subprocess.wait()  # Ждем завершения процесса
+            logger.debug("Fantasy Monad stopped")
+
 
 class ModuleProfilesDialog(tk.Toplevel):
     def __init__(self, parent, module: str):
@@ -149,6 +173,8 @@ class ModuleProfilesDialog(tk.Toplevel):
             tk.Button(frame, text="Start Module", command=self.on_start_pizza).pack(side=tk.BOTTOM, padx=5)
         if module == 'Turbo':
             tk.Button(frame, text="Start Module", command=self.on_start_turbo).pack(side=tk.BOTTOM, padx=5)
+        if module == 'Fantasy':
+            tk.Button(frame, text="Start Module", command=self.on_start_fantasy).pack(side=tk.BOTTOM, padx=5)
 
         # Делаем диалог модальным
         self.transient(parent)
@@ -206,6 +232,23 @@ class ModuleProfilesDialog(tk.Toplevel):
             taps_range, password, threads = taps_range_dialog.result
 
             self.result = profile_names, taps_range, password, threads
+            self.destroy()
+
+    def on_start_fantasy(self):
+        profiles_selection = self.profiles_list.curselection()
+        if not profiles_selection:
+            messagebox.showerror("Error", "Please select profiles")
+            return
+
+        profile_names = [self.profiles_list.get(i) for i in profiles_selection]
+
+        fantasy_settings_dialog = FantasyDialog(self)
+        self.wait_window(fantasy_settings_dialog)
+
+        if fantasy_settings_dialog.result:
+            ref_codes, how_many_accounts, threads = fantasy_settings_dialog.result
+
+            self.result = profile_names, ref_codes, how_many_accounts, threads
             self.destroy()
 
 
@@ -362,6 +405,98 @@ class TurboDialog(tk.Toplevel):
                 raise ValueError("Threads must be positive")
 
             self.result = (taps_range, password, threads)
+            self.destroy()
+        except ValueError as e:
+            messagebox.showerror("Error", str(e))
+
+
+class FantasyDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.result = None
+
+        self.title("Enter launch settings:")
+
+        # Настройка размеров окна
+        window_width = 600
+        window_height = 400
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x_offset = (screen_width - window_width) // 2
+        y_offset = (screen_height - window_height) // 2
+        self.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
+
+        tk.Label(
+            self,
+            text="Enter referral codes like 'ref1,ref2,ref3,...'\n "
+                 "OR leave blank",
+            font=("Arial", 12)
+        ).pack(expand=True)
+
+        # Создаем и размещаем элементы
+        frame = tk.Frame(self, padx=20, pady=20)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        # Поле для количества taps
+        tk.Label(frame, text="Referral codes:").grid(row=0, column=0, sticky='w', pady=5)
+        self.refs_entry = tk.Entry(frame)
+        self.refs_entry.grid(row=0, column=1, sticky='ew', pady=5)
+        self.refs_entry.insert(0, "ref1,ref2,ref3,...")  # Значение по умолчанию
+
+        tk.Label(
+            self,
+            text="You can leave blank how many accounts to register on each ref code if no ref codes",
+            font=("Arial", 12)
+        ).pack(expand=True)
+
+        # Поле для количества потоков
+        tk.Label(frame, text="Enter how many accounts to register on each ref code:").grid(row=1, column=0, sticky='w', pady=5)
+        self.accounts_entry = tk.Entry(frame)
+        self.accounts_entry.grid(row=1, column=1, sticky='ew', pady=5)
+        self.accounts_entry.insert(0, "5")  # Значение по умолчанию
+
+        # Поле для количества потоков
+        tk.Label(frame, text="Threads:").grid(row=2, column=0, sticky='w', pady=5)
+        self.threads_entry = tk.Entry(frame)
+        self.threads_entry.grid(row=2, column=1, sticky='ew', pady=5)
+        self.threads_entry.insert(0, "3")  # Значение по умолчанию
+
+        # Кнопки
+        button_frame = tk.Frame(frame)
+        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
+
+        tk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.LEFT, padx=5)
+
+        # Настройка grid
+        frame.columnconfigure(1, weight=1)
+
+        # Делаем диалог модальным
+        self.transient(parent)
+        self.grab_set()
+
+        # Фокус на поле пароля
+        self.refs_entry.focus_set()
+
+        # Привязываем Enter к OK
+        self.bind('<Return>', lambda e: self.on_ok())
+
+    def on_ok(self):
+        try:
+            ref_codes = self.refs_entry.get()
+            # if len(ref_codes.split('-')) != 2:
+            #     raise ValueError("Incorrect input")
+
+            how_many_accounts = self.accounts_entry.get()
+
+            if ref_codes and not how_many_accounts:
+                raise ValueError("If you fill ref codes you need to fill how many accounts")
+
+            threads = int(self.threads_entry.get())
+            if threads <= 0:
+                raise ValueError("Threads must be positive")
+
+            self.result = (ref_codes, how_many_accounts, threads)
             self.destroy()
         except ValueError as e:
             messagebox.showerror("Error", str(e))

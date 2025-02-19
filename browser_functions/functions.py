@@ -18,71 +18,71 @@ async def launch_profile_async(playwright_instance: Playwright,
                                restore_pages: bool = True):
     logger.debug(f"Starting profile {profile.name}...")
     try:
-            args = get_context_launch_args(profile, extensions)
+        args = get_context_launch_args(profile, extensions)
 
-            context = await playwright_instance.chromium.launch_persistent_context(**args)
+        context = await playwright_instance.chromium.launch_persistent_context(**args)
 
-            profile.last_opening_time = datetime.now().replace(microsecond=0)
-            db.commit()
+        profile.last_opening_time = datetime.now().replace(microsecond=0)
+        db.commit()
 
-            try:
-                # await context.add_init_script("""
-                #                                 Object.defineProperty(navigator, 'webdriver', {
-                #                                     get: () => undefined
-                #                                 });
-                #                                 Object.defineProperty(navigator, 'automationControlled', {
-                #                                     get: () => false
-                #                                 });
-                #                                 window.chrome = {
-                #                                     runtime: {}
-                #                                 };
-                #                             """)
-                # fingerprint = json.loads(profile.fingerprint)
-                # await context.add_init_script(InjectFunction(fingerprint))
-                if restore_pages:
-                    logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
-                    # Открываем страницы и держим браузер открытым
-                    for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
-                        page = await context.new_page()
-                        try:
-                            await page.goto(page_url)
-                        except Exception as e:
-                            # logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
-                            # await asyncio.sleep(60)
-                            if 'ERR_TIMED_OUT' in str(e):
-                                logger.error(f"Profile {profile.name} proxy doesn't work")
-                                break
-                            # await page.goto('http://eth0.me/')
-                else:
+        try:
+            # await context.add_init_script("""
+            #                                 Object.defineProperty(navigator, 'webdriver', {
+            #                                     get: () => undefined
+            #                                 });
+            #                                 Object.defineProperty(navigator, 'automationControlled', {
+            #                                     get: () => false
+            #                                 });
+            #                                 window.chrome = {
+            #                                     runtime: {}
+            #                                 };
+            #                             """)
+            # fingerprint = json.loads(profile.fingerprint)
+            # await context.add_init_script(InjectFunction(fingerprint))
+            if restore_pages:
+                logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
+                # Открываем страницы и держим браузер открытым
+                for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
                     page = await context.new_page()
-
-                # Закрываем стартовую about:blank
-                for page in context.pages:
-                    if page.url == 'about:blank':
-                        await page.close()
-
-                if keep_open:
-                    while True:
-                        await asyncio.sleep(0.25)
-                        pages = context.pages
-                        if not pages:
-                            db.commit()
+                    try:
+                        await page.goto(page_url)
+                    except Exception as e:
+                        # logger.error(f"Profile {profile.name} error {e}, waiting for 60 seconds until closing")
+                        # await asyncio.sleep(60)
+                        if 'ERR_TIMED_OUT' in str(e):
+                            logger.error(f"Profile {profile.name} proxy doesn't work")
                             break
-                        profile.page_urls = [
-                            page.url
-                            for page in pages
-                            if (page.url != 'about:blank' and
-                                "chrome-extension://" not in page.url and
-                                "chrome-error://" not in page.url)
-                        ]
-                else:
-                    return context
+                        # await page.goto('http://eth0.me/')
+            else:
+                page = await context.new_page()
 
-            except Exception as e:
-                logger.error(f"Error in profile {profile.name}: {e}")
-                if context:
-                    await context.close()
-                raise
+            # Закрываем стартовую about:blank
+            for page in context.pages:
+                if page.url == 'about:blank':
+                    await page.close()
+
+            if keep_open:
+                while True:
+                    await asyncio.sleep(0.25)
+                    pages = context.pages
+                    if not pages:
+                        db.commit()
+                        break
+                    profile.page_urls = [
+                        page.url
+                        for page in pages
+                        if (page.url != 'about:blank' and
+                            "chrome-extension://" not in page.url and
+                            "chrome-error://" not in page.url)
+                    ]
+            else:
+                return context
+
+        except Exception as e:
+            logger.error(f"Error in profile {profile.name}: {e}")
+            # if context:
+            #     await context.close()
+
 
     except Exception as e:
         logger.exception(f'Profile {profile.name} error: {e}')
