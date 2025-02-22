@@ -25,6 +25,7 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
     for row in rows:
         if row[0]:
             name = str(row[0])
+
             if row[1]:
                 try:
                     proxy = Proxy.from_str(row[1])
@@ -33,14 +34,15 @@ def get_profiles_from_excel(excel_path: str, skip_first_line: bool = True):
                     logger.warning(e)
             else:
                 proxy = ''
+
             if row[2]:
                 fingerprint = row[2]
             else:
                 fingerprint = FingerprintGenerator(
                     browser=[
-                        Browser(name='chrome', min_version=130, max_version=131),
+                        Browser(name='chrome', min_version=130, max_version=133),
                     ],
-                    os=('windows', 'macos'),
+                    os=('windows'),
                     device='desktop',
                     locale=('en-US',),
                     http_version=3,

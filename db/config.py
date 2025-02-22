@@ -19,6 +19,8 @@ EXTENSIONS_DIR = os.path.join(USER_FILES_DIR, 'extensions')
 ADS_PROFILES_TABLE = os.path.join(USER_FILES_DIR, 'profiles_ads.xlsx')
 COOKIES_DIR = os.path.join(USER_FILES_DIR, 'cookies')
 X_USERNAMES_TXT = os.path.join(USER_FILES_DIR, 'x_usernames_for_following.txt')
+FANTASY_BACKUP = os.path.join(USER_FILES_DIR, 'fantasy_private_keys.xlsx')
+DOWNLOADS_DIR = os.path.join(USER_FILES_DIR, 'downloads')
 
 OS_TYPE = 'win' if sys.platform.startswith('win') else 'mac' if sys.platform.startswith(
     'darwin') else 'linux' if sys.platform.startswith('linux') else 'unknown'

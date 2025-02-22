@@ -8,7 +8,10 @@ import ctypes
 from tkinter import messagebox
 import tkinter as tk
 
-from db import config
+if getattr(sys, 'frozen', False):
+    ROOT_DIR = Path(sys.executable).parent.absolute()
+else:
+    ROOT_DIR = Path(__file__).parent.parent.absolute()
 
 
 def is_windows():
@@ -56,7 +59,7 @@ start "" "{python_path}" "{script_path}"
             with winshell.shortcut(path) as shortcut:
                 shortcut.path = run_script
                 shortcut.working_directory = os.path.dirname(script_path)
-                shortcut.icon_location = (os.path.join(config.ROOT_DIR, "db", "assets", "logo.ico"), 0)
+                shortcut.icon_location = (os.path.join(ROOT_DIR, "db", "assets", "logo.ico"), 0)
                 shortcut.description = "Vortex Antidetect Browser"
         except Exception as e:
             print(f"Error creating shortcut with winshell: {e}")
@@ -66,7 +69,7 @@ start "" "{python_path}" "{script_path}"
             # shortcut = shell.CreateShortCut(path)
             # shortcut.TargetPath = run_script
             # shortcut.WorkingDirectory = os.path.dirname(script_path)
-            # shortcut.IconLocation = os.path.join(config.ROOT_DIR, "db", "assets", "logo.ico")
+            # shortcut.IconLocation = os.path.join(ROOT_DIR, "db", "assets", "logo.ico")
             # shortcut.Description = "Vortex Antidetect Browser"
             # shortcut.Save()
     else:
@@ -76,7 +79,7 @@ start "" "{python_path}" "{script_path}"
         desktop_entry = f"""[Desktop Entry]
 Name=Vortex Antidetect Browser
 Exec="{run_script}"
-Icon={os.path.join(config.ROOT_DIR, "db", "assets", "logo.png")}
+Icon={os.path.join(ROOT_DIR, "db", "assets", "logo.png")}
 Type=Application
 Terminal=false
 Categories=Utility;
@@ -133,10 +136,14 @@ exec "{python_path}" "{script_path}"
 def install_dependencies(pip_path):
     """Устанавливает зависимости с учетом ОС"""
     try:
+        # Обновляем pip до последней версии
+        print("Upgrading pip...")
+        subprocess.run([pip_path, "install", "--upgrade", "pip"], check=True, encoding='utf-8')
+        
         if is_windows():
             # Windows-специфичная установка
             print("Installing pywin32...")
-            subprocess.run([pip_path, "install", "--upgrade", "pywin32>=223"], check=True)
+            subprocess.run([pip_path, "install", "--upgrade", "--no-cache-dir", "pywin32>=223"], check=True, encoding='utf-8')
             
             # Запускаем post-install скрипт pywin32
             python_path = os.path.dirname(pip_path)  # путь к папке Scripts
@@ -157,19 +164,29 @@ def install_dependencies(pip_path):
             
             if post_install:
                 print(f"Running pywin32 post-install script: {post_install}")
-                subprocess.run([python_exe, post_install, "-install"], check=True)
+                subprocess.run([python_exe, post_install, "-install"], check=True, encoding='utf-8')
             else:
                 print("pywin32_postinstall.py not found, trying alternative installation...")
                 # Пробуем переустановить pywin32
-                subprocess.run([pip_path, "uninstall", "pywin32", "-y"], check=True)
-                subprocess.run([pip_path, "install", "--no-cache-dir", "pywin32>=223"], check=True)
+                subprocess.run([pip_path, "uninstall", "pywin32", "-y"], check=True, encoding='utf-8')
+                subprocess.run([pip_path, "install", "--no-cache-dir", "pywin32>=223"], check=True, encoding='utf-8')
             
             print("Installing winshell...")
-            subprocess.run([pip_path, "install", "winshell"], check=True)
+            subprocess.run([pip_path, "install", "--no-cache-dir", "winshell"], check=True, encoding='utf-8')
         
-        # Устанавливаем общие зависимости
+        # Устанавливаем общие зависимости по одной
         print("Installing common dependencies...")
-        subprocess.run([pip_path, "install", "-r", "requirements.txt"], check=True)
+        with open("requirements.txt", "r", encoding='utf-8') as f:
+            requirements = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+        
+        for req in requirements:
+            print(f"Installing {req}...")
+            try:
+                subprocess.run([pip_path, "install", "--no-cache-dir", req], check=True, encoding='utf-8')
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to install {req}, trying alternative installation...")
+                # Пробуем установить через альтернативный источник
+                subprocess.run([pip_path, "install", "--no-cache-dir", "--index-url", "https://pypi.org/simple", req], check=True, encoding='utf-8')
         
     except subprocess.CalledProcessError as e:
         raise Exception(f"Failed to install dependencies: {str(e)}")

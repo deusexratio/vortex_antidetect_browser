@@ -147,80 +147,109 @@ class StealthPlaywrightPatcher:
 
 
 def InjectFunction(fingerprint: dict) -> str:
-    return f"""
-    (()=>{{
-        {utils_js()}
-
-        const fp = {json.dumps(fingerprint)};
-        const {{
-            battery,
-            navigator: {{
-                userAgentData,
-                webdriver,
-                ...navigatorProps
-            }},
-            screen: allScreenProps,
-            videoCard,
-            audioCodecs,
-            videoCodecs,
-            mockWebRTC,
-        }} = fp;
-
-        slim = fp.slim;
-
-        const historyLength = {randrange(1, 6)};
-
-        const {{
-            outerHeight,
-            outerWidth,
-            devicePixelRatio,
-            innerWidth,
-            innerHeight,
-            screenX,
-            pageXOffset,
-            pageYOffset,
-            clientWidth,
-            clientHeight,
-            hasHDR,
-            ...newScreen
-        }} = allScreenProps;
-
-        const windowScreenProps = {{
-            innerHeight,
-            outerHeight,
-            outerWidth,
-            innerWidth,
-            screenX,
-            pageXOffset,
-            pageYOffset,
-            devicePixelRatio,
+    func = f"""
+            const getParameter = WebGLRenderingContext.prototype.getParameter;
+           WebGLRenderingContext.prototype.getParameter = function(parameter) {{
+           if (parameter === 37445) return "NVIDIA GeForce RTX 3060"; // Подмена GPU
+                return getParameter.apply(this, arguments);
         }};
 
-        const documentScreenProps = {{
-            clientHeight,
-            clientWidth,
+        HTMLCanvasElement.prototype.toDataURL = function() {{
+            return "data:image/png;base64,blocked";
         }};
 
-        runHeadlessFixes();
-        if (mockWebRTC) blockWebRTC();
-        if (slim) {{
-            window['slim'] = true;
+        if (window.RTCPeerConnection) {{
+            window.RTCPeerConnection = function() {{
+                return null;
+            }};
         }}
-        overrideIntlAPI(navigatorProps.language);
-        overrideStatic();
-        if (userAgentData) {{
-            overrideUserAgentData(userAgentData);
-        }}
-        if (window.navigator.webdriver) {{
-            navigatorProps.webdriver = false;
-        }}
-        overrideInstancePrototype(window.navigator, navigatorProps);
-        overrideInstancePrototype(window.screen, newScreen);
-        overrideWindowDimensionsProps(windowScreenProps);
-        overrideDocumentDimensionsProps(documentScreenProps);
-        overrideInstancePrototype(window.history, {{ length: historyLength }});
-        overrideWebGl(videoCard);
-        overrideCodecs(audioCodecs, videoCodecs);
-        overrideBattery(battery);
-    }})()
+        
+        Object.defineProperty(navigator, 'webdriver', {{
+            get: () => undefined
+        }});
+        Object.defineProperty(navigator, 'automationControlled', {{
+            get: () => false
+        }});
+        window.chrome = {{
+            runtime: {{}}
+        }};
     """
+
+    # func += f"""
+    # (()=>{{
+    #     {utils_js()}
+    #
+    #     const fp = {json.dumps(fingerprint)};
+    #     const {{
+    #         battery,
+    #         navigator: {{
+    #             userAgentData,
+    #             webdriver,
+    #             ...navigatorProps
+    #         }},
+    #         screen: allScreenProps,
+    #         videoCard,
+    #         audioCodecs,
+    #         videoCodecs,
+    #         mockWebRTC,
+    #     }} = fp;
+    #
+    #     slim = fp.slim;
+    #
+    #    // const historyLength = {randrange(1, 6)};
+    #
+    #     const {{
+    #         outerHeight,
+    #         outerWidth,
+    #         devicePixelRatio,
+    #         innerWidth,
+    #         innerHeight,
+    #         screenX,
+    #         pageXOffset,
+    #         pageYOffset,
+    #         clientWidth,
+    #         clientHeight,
+    #         hasHDR,
+    #         ...newScreen
+    #     }} = allScreenProps;
+    #
+    #     const windowScreenProps = {{
+    #         innerHeight,
+    #         outerHeight,
+    #         outerWidth,
+    #         innerWidth,
+    #         screenX,
+    #         pageXOffset,
+    #         pageYOffset,
+    #         devicePixelRatio,
+    #     }};
+    #
+    #     const documentScreenProps = {{
+    #         clientHeight,
+    #         clientWidth,
+    #     }};
+    #
+    #     runHeadlessFixes();
+    #     if (mockWebRTC) blockWebRTC();
+    #     if (slim) {{
+    #         window['slim'] = true;
+    #     }}
+    #     overrideIntlAPI(navigatorProps.language);
+    #     overrideStatic();
+    #     if (userAgentData) {{
+    #         overrideUserAgentData(userAgentData);
+    #     }}
+    #     if (window.navigator.webdriver) {{
+    #         navigatorProps.webdriver = false;
+    #     }}
+    #     overrideInstancePrototype(window.navigator, navigatorProps);
+    #     overrideInstancePrototype(window.screen, newScreen);
+    #     overrideWindowDimensionsProps(windowScreenProps);
+    #     overrideDocumentDimensionsProps(documentScreenProps);
+    #     overrideInstancePrototype(window.history, {{ length: historyLength }});
+    #     overrideWebGl(videoCard);
+    #     overrideCodecs(audioCodecs, videoCodecs);
+    #     overrideBattery(battery);
+    # }})()
+    # """
+    return func

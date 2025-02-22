@@ -1,6 +1,5 @@
 import json
-import sys
-
+import requests
 from better_proxy import Proxy
 from browserforge.injectors.utils import only_injectable_headers
 from loguru import logger
@@ -10,17 +9,33 @@ from db import config
 from gui_functions.utils import is_dark_mode_win, is_dark_mode_mac
 
 
+def get_proxy_country_timezone(proxy_str: str | None) -> str | None:
+    if not proxy_str:
+        return None
+    
+    try:
+        proxy_obj = Proxy.from_str(proxy_str)
+        response = requests.get(f'http://ip-api.com/json/{proxy_obj.host}')
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success':
+                timezone = data.get('timezone')
+                if timezone:
+                    return timezone
+    except Exception as e:
+        logger.warning(f"Failed to get timezone for proxy {proxy_str}: {e}")
+    return None
+
+
 def get_context_launch_args(profile: Profile, extensions: list[str] | None) -> dict:
     fingerprint = json.loads(profile.fingerprint)
     str_args =  [
-                # '--disable-blink-features=AutomationControlled',
                 # '--start-maximized',
                 # '--no-sandbox',
                 # '--disable-setuid-sandbox',
                 # '--disable-infobars',
                 # '--disable-dev-shm-usage',
                 # '--disable-blink-features',
-                '--disable-blink-features=AutomationControlled',
                 # '--disable-features=IsolateOrigins,site-per-process',
                 # '--ignore-certificate-errors',
                 # '--enable-features=NetworkService,NetworkServiceInProcess',
@@ -30,6 +45,10 @@ def get_context_launch_args(profile: Profile, extensions: list[str] | None) -> d
                 # '--disable-site-isolation-trials',
                 # f'--window-size={fingerprint["screen"]["width"]},{fingerprint["screen"]["height"]}',
                 # '--app-name="Vortex Browser"',
+                # f"--disable-reading-from-canvas",
+                # f"--disable-webgl",
+                '--disable-blink-features=AutomationControlled',
+                # "--use-mock-keychain",
                 f'--window-name={profile.name}',
                 f'--lang=en-US' # todo: add to settings
             ]
@@ -43,19 +62,13 @@ def get_context_launch_args(profile: Profile, extensions: list[str] | None) -> d
         logger.debug(f"Loading extensions: {extension_paths}")
 
     if config.OS_TYPE == 'win':
-        if is_dark_mode_win():
-            color_scheme = 'dark'
-        else:
-            color_scheme = 'light'
-
+        color_scheme = 'dark' if is_dark_mode_win() else 'light'
     elif config.OS_TYPE == 'mac':
-        if is_dark_mode_mac():
-            color_scheme = 'dark'
-        else:
-            color_scheme = 'light'
-
+        color_scheme = 'dark' if is_dark_mode_mac() else 'light'
     else:
         color_scheme = 'light'
+
+    # Get timezone from proxy if available
 
     pw_args = {
         'user_data_dir': profile.user_data_dir,
@@ -77,9 +90,12 @@ def get_context_launch_args(profile: Profile, extensions: list[str] | None) -> d
                 ],
         'bypass_csp': True,
         'ignore_https_errors': True,
-        'permissions': ['geolocation', 'notifications', 'camera', 'microphone'],
-        'timezone_id': None,
+        'permissions': ['geolocation', 'notifications', 'camera', 'microphone', "clipboard-read", "clipboard-write"], #
+        'timezone_id': get_proxy_country_timezone(profile.proxy),
         'locale': 'en-US',
+        # 'channel': 'chrome',
+        'accept_downloads': True,
+        'downloads_path': config.DOWNLOADS_DIR,
         # **fingerprint # разворачиваем параметры фингерпринта
     }
 

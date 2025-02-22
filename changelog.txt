@@ -31,3 +31,9 @@ v1.0.7
 
 v1.0.8
 - ❗❗❗ Added Fantasy Monad module
+
+v1.1.0
+- Added path for files downloading
+- Added permissions for clipboard
+- Added new features for Fantasy Monad module (although thanks to privy now it doesn't make sense)
+- Added auto-adjusting browser timezone to geo of proxy

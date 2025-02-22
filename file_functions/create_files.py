@@ -64,6 +64,7 @@ def create_files():
     touch(path=config.USER_DATA_DIR)
     touch(path=config.EXTENSIONS_DIR)
     touch(path=config.COOKIES_DIR)
+    touch(path=config.DOWNLOADS_DIR)
     touch(path=config.X_USERNAMES_TXT, file=True)
     # touch(path=config.ADS_PROFILES_TABLE, file=True)
     # touch(path=config.IMPORT_TABLE, file=True)
@@ -113,3 +114,9 @@ def create_files():
         sheet = workbook.active
         write_headers(sheet, ['name', 'ads id', 'cookie'])
         workbook.save(config.ADS_PROFILES_TABLE)
+
+    if not os.path.exists(config.FANTASY_BACKUP):
+        workbook = Workbook()
+        sheet = workbook.active
+        write_headers(sheet, ['name', 'fantasy_x_username', 'private_key', 'seed_phrase', 'fantasy_address'])
+        workbook.save(config.FANTASY_BACKUP)

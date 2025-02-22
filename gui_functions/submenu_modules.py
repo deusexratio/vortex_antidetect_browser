@@ -120,13 +120,27 @@ class SubMenuModules(tk.Toplevel):
         self.wait_window(dialog)
 
         if dialog.result:
-            profile_names, ref_codes, how_many_accounts, threads = dialog.result
+            profile_names, result = dialog.result
             profiles_names = ",".join(profile_names)
             # Запускаем скрипт со списком профилей
             script_path = os.path.join(config.ROOT_DIR, "modules", "fantasy_monad.py")
+
+            cmd_args = [
+                sys.executable, script_path,
+                profiles_names,
+                result['ref_codes'],
+                str(result['reg_for_ref_code']),
+                str(result['threads']),
+                str(int(result['do_register'])),
+                str(int(result['do_spin'])),
+                str(int(result['do_backup'])),
+            ]
+
             if self.fantasy_subprocess is None:
-                self.fantasy_subprocess = subprocess.Popen([sys.executable, script_path,
-                                                          profiles_names, ref_codes, how_many_accounts, str(threads)])
+                self.fantasy_subprocess = subprocess.Popen(
+                    cmd_args,
+                    cwd=config.ROOT_DIR
+                )
 
     def stop_fantasy_monad(self):
         """Останавливает субпроцесс"""
@@ -246,9 +260,7 @@ class ModuleProfilesDialog(tk.Toplevel):
         self.wait_window(fantasy_settings_dialog)
 
         if fantasy_settings_dialog.result:
-            ref_codes, how_many_accounts, threads = fantasy_settings_dialog.result
-
-            self.result = profile_names, ref_codes, how_many_accounts, threads
+            self.result = profile_names, fantasy_settings_dialog.result
             self.destroy()
 
 
@@ -419,7 +431,7 @@ class FantasyDialog(tk.Toplevel):
 
         # Настройка размеров окна
         window_width = 600
-        window_height = 400
+        window_height = 450
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
         x_offset = (screen_width - window_width) // 2
@@ -434,69 +446,76 @@ class FantasyDialog(tk.Toplevel):
         ).pack(expand=True)
 
         # Создаем и размещаем элементы
-        frame = tk.Frame(self, padx=20, pady=20)
-        frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(self, padx=20, pady=20)
+        main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Поле для количества taps
-        tk.Label(frame, text="Referral codes:").grid(row=0, column=0, sticky='w', pady=5)
-        self.refs_entry = tk.Entry(frame)
-        self.refs_entry.grid(row=0, column=1, sticky='ew', pady=5)
-        self.refs_entry.insert(0, "ref1,ref2,ref3,...")  # Значение по умолчанию
+        # Верхняя секция с полями ввода
+        input_frame = tk.Frame(main_frame)
+        input_frame.pack(pady=(0, 20))
 
-        tk.Label(
-            self,
-            text="You can leave blank how many accounts to register on each ref code if no ref codes",
-            font=("Arial", 12)
-        ).pack(expand=True)
+        # Создаем контейнер для центрирования полей ввода
+        entry_container = tk.Frame(input_frame)
+        entry_container.pack()
+
+        # Поле для ввода реферальных кодов
+        ref_frame = tk.Frame(entry_container)
+        ref_frame.pack(pady=5)
+        tk.Label(ref_frame, text="Referral codes:").pack()
+        self.ref_codes = tk.Entry(ref_frame, width=60)
+        self.ref_codes.pack()
+
+        # Поле для количества регистраций на один реферальный код
+        reg_frame = tk.Frame(entry_container)
+        reg_frame.pack(pady=5)
+        tk.Label(reg_frame, text="Registrations per referral code:").pack()
+        self.reg_for_ref_code = tk.Entry(reg_frame, width=10)
+        self.reg_for_ref_code.insert(0, "1")
+        self.reg_for_ref_code.pack()
 
         # Поле для количества потоков
-        tk.Label(frame, text="Enter how many accounts to register on each ref code:").grid(row=1, column=0, sticky='w', pady=5)
-        self.accounts_entry = tk.Entry(frame)
-        self.accounts_entry.grid(row=1, column=1, sticky='ew', pady=5)
-        self.accounts_entry.insert(0, "5")  # Значение по умолчанию
+        threads_frame = tk.Frame(entry_container)
+        threads_frame.pack(pady=5)
+        tk.Label(threads_frame, text="Number of threads:").pack()
+        self.threads = tk.Entry(threads_frame, width=10)
+        self.threads.insert(0, "5")
+        self.threads.pack()
 
-        # Поле для количества потоков
-        tk.Label(frame, text="Threads:").grid(row=2, column=0, sticky='w', pady=5)
-        self.threads_entry = tk.Entry(frame)
-        self.threads_entry.grid(row=2, column=1, sticky='ew', pady=5)
-        self.threads_entry.insert(0, "3")  # Значение по умолчанию
+        # Средняя секция с чекбоксами
+        checkbox_frame = tk.Frame(main_frame)
+        checkbox_frame.pack(pady=20)
 
-        # Кнопки
-        button_frame = tk.Frame(frame)
-        button_frame.grid(row=3, column=0, columnspan=2, pady=20)
+        # Добавляем чекбоксы для действий
+        self.do_register = tk.BooleanVar(value=True)
+        tk.Checkbutton(checkbox_frame, text="Register accounts", variable=self.do_register).pack()
+
+        self.do_spin = tk.BooleanVar(value=True)
+        tk.Checkbutton(checkbox_frame, text="Spin roulette", variable=self.do_spin).pack()
+
+        self.do_backup = tk.BooleanVar(value=True)
+        tk.Checkbutton(checkbox_frame, text="Export backup", variable=self.do_backup).pack()
+
+        # Нижняя секция с кнопками
+        button_frame = tk.Frame(main_frame)
+        button_frame.pack(pady=(20, 0))
 
         tk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.LEFT, padx=5)
 
-        # Настройка grid
-        frame.columnconfigure(1, weight=1)
-
-        # Делаем диалог модальным
-        self.transient(parent)
-        self.grab_set()
-
-        # Фокус на поле пароля
-        self.refs_entry.focus_set()
-
-        # Привязываем Enter к OK
-        self.bind('<Return>', lambda e: self.on_ok())
-
     def on_ok(self):
-        try:
-            ref_codes = self.refs_entry.get()
-            # if len(ref_codes.split('-')) != 2:
-            #     raise ValueError("Incorrect input")
+        ref_codes = self.ref_codes.get()
+        reg_for_ref_code = self.reg_for_ref_code.get()
+        threads = self.threads.get()
 
-            how_many_accounts = self.accounts_entry.get()
+        if not reg_for_ref_code.isdigit() or not threads.isdigit():
+            messagebox.showerror("Error", "Registrations per code and threads must be numbers!")
+            return
 
-            if ref_codes and not how_many_accounts:
-                raise ValueError("If you fill ref codes you need to fill how many accounts")
-
-            threads = int(self.threads_entry.get())
-            if threads <= 0:
-                raise ValueError("Threads must be positive")
-
-            self.result = (ref_codes, how_many_accounts, threads)
-            self.destroy()
-        except ValueError as e:
-            messagebox.showerror("Error", str(e))
+        self.result = {
+            'ref_codes': ref_codes,
+            'reg_for_ref_code': int(reg_for_ref_code),
+            'threads': int(threads),
+            'do_register': self.do_register.get(),
+            'do_spin': self.do_spin.get(),
+            'do_backup': self.do_backup.get()
+        }
+        self.destroy()

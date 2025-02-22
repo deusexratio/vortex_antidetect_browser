@@ -16,6 +16,18 @@ async def launch_profile_async(playwright_instance: Playwright,
                                extensions: list[str] | None,
                                keep_open: bool = True,
                                restore_pages: bool = True):
+    """
+    Launches browser for profile
+    Args:
+        profile:
+        playwright_instance:
+        extensions:
+        keep_open:
+        restore_pages:
+
+    Returns:
+        context: BrowserContext
+    """
     logger.debug(f"Starting profile {profile.name}...")
     try:
         args = get_context_launch_args(profile, extensions)
@@ -26,23 +38,40 @@ async def launch_profile_async(playwright_instance: Playwright,
         db.commit()
 
         try:
-            # await context.add_init_script("""
-            #                                 Object.defineProperty(navigator, 'webdriver', {
-            #                                     get: () => undefined
-            #                                 });
-            #                                 Object.defineProperty(navigator, 'automationControlled', {
-            #                                     get: () => false
-            #                                 });
-            #                                 window.chrome = {
-            #                                     runtime: {}
-            #                                 };
-            #                             """)
-            # fingerprint = json.loads(profile.fingerprint)
+            fingerprint = json.loads(profile.fingerprint)
             # await context.add_init_script(InjectFunction(fingerprint))
+            await context.add_init_script("""
+            const getParameter = WebGLRenderingContext.prototype.getParameter;
+                   WebGLRenderingContext.prototype.getParameter = function(parameter) {
+                   if (parameter === 37445) return "NVIDIA GeForce RTX 3060"; // Подмена GPU
+                        return getParameter.apply(this, arguments);
+                };
+
+                HTMLCanvasElement.prototype.toDataURL = function() {
+                    return "data:image/png;base64,blocked";
+                };
+
+                if (window.RTCPeerConnection) {
+                    window.RTCPeerConnection = function() {
+                        return null;
+                    };
+                }
+                
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => false
+                });
+                Object.defineProperty(navigator, 'automationControlled', {
+                    get: () => null
+                });
+            //    window.chrome = {
+            //        runtime: {}
+            //    };
+            """)
+
             if restore_pages:
                 logger.debug(f"Restoring previously opened tabs {profile.page_urls}")
                 # Открываем страницы и держим браузер открытым
-                for page_url in profile.page_urls or ['https://amiunique.org/fingerprint']:
+                for page_url in profile.page_urls or ['https://www.browserscan.net/']:
                     page = await context.new_page()
                     try:
                         await page.goto(page_url)

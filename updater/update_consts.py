@@ -10,4 +10,4 @@ sys.path.append(ROOT_DIR)
 from updater.update_utils import Version
 
 GITHUB_REPO = "deusexratio/vortex_antidetect_browser"
-CURRENT_VERSION = Version("1.0.8")
+CURRENT_VERSION = Version("1.1.0")
